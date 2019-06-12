@@ -26,19 +26,35 @@ App = function(editor, container, lightbox)
 			if (file != null && file.constructor == DriveFile && file.isModified() && this.drive != null)
 			{
 				EditorUi.logEvent({category: 'DISCARD-SAVE-FILE-' + file.getHash() + '.' +
-					file.desc.headRevisionId + '.' + file.desc.modifiedDate + '-size-' + file.getSize(),
-					action: 'time-' + new Date().toISOString() + '-saved-' +
-					((file.lastSaved != null) ? file.lastSaved.toISOString() : 'never') +
-					((this.editor.autosave) ? '-autosave-on' : '-autosave-off'),
+					file.desc.headRevisionId + '.' + file.desc.modifiedDate + '-size_' + file.getSize(),
+					action: 'save_' + ((file.lastSaved != null) ?  Math.round((new Date().getTime() - file.lastSaved) / 1000) : 'never') +
+					'-autosave_' + (((this.editor.autosave) ? 'on' : 'off') +
+					'-open_' + ((file.opened != null) ? Math.round((new Date().getTime() - file.opened) / 1000) : 'never')),
 					label: (this.drive.user != null) ? this.drive.user.id : 'unknown-user'});
 			}
 			else if (file != null && file.isModified())
 			{
-				EditorUi.logEvent({category: 'DISCARD-SAVE-FILE-' + file.getHash(), action: 'unload',
-					label: ((this.editor.autosave) ? 'autosave-on' : 'autosave-off')});
+				EditorUi.logEvent({category: 'DISCARD-SAVE-FILE-' + file.getHash() + '-size_' + file.getSize(),
+					action: 'save_' + ((file.lastSaved != null) ?  Math.round((new Date().getTime() - file.lastSaved) / 1000) : 'never') +
+					'-autosave_' + (((this.editor.autosave) ? 'on' : 'off') +
+					'-open_' + ((file.opened != null) ? Math.round((new Date().getTime() - file.opened) / 1000) : 'never')),
+					label: 'nolabel'});
 			}
 		});
 	}
+	
+	// Logs changes to autosave
+	this.editor.addListener('autosaveChanged', mxUtils.bind(this, function()
+	{
+		var file = this.getCurrentFile();
+		
+		if (file != null)
+		{
+			EditorUi.logEvent({category: ((this.editor.autosave) ? 'ON' : 'OFF') +
+				'-AUTOSAVE-FILE-' + file.getHash(), action: 'changed',
+				label: 'autosave_' + ((this.editor.autosave) ? 'on' : 'off')});
+		}
+	}));
 	
 	// Pre-fetches images
 	if (mxClient.IS_SVG)
@@ -525,6 +541,26 @@ App.main = function(callback, createUi)
 			// mxSettings is not yet initialized in configure mode, redirect parameter
 			// to p URL parameter in caller for plugins in embed mode
 			var plugins = (mxSettings.settings != null) ? mxSettings.getPlugins() : null;
+			
+			// Configured plugins in embed mode with configure=1 URL should be loaded so we
+			// look ahead here and parse the config to fetch the list of custom plugins
+			if (mxSettings.settings == null && isLocalStorage && typeof(JSON) !== 'undefined')
+			{
+				try
+				{
+					var temp = JSON.parse(localStorage.getItem(mxSettings.key));
+					
+					if (temp != null)
+					{
+						plugins = temp.plugins;
+					}
+				}
+				catch (e)
+				{
+					// ignore
+				}
+			}
+						
 			var temp = urlParams['p'];
 			App.initPluginCallback();
 
@@ -1134,7 +1170,8 @@ App.prototype.init = function()
 						this.checkLicense();
 						
 						if (this.drive.user != null && (!isLocalStorage || mxSettings.settings == null ||
-							mxSettings.settings.closeRealtimeWarning == null) &&
+							mxSettings.settings.closeRealtimeWarning == null || mxSettings.settings.closeRealtimeWarning <
+							new Date().getTime() - (30 * 24 * 60 * 60 * 1000)) &&
 							(!this.editor.chromeless || this.editor.editable))
 						{
 							this.drive.checkRealtimeFiles(mxUtils.bind(this, function()
@@ -1310,11 +1347,11 @@ App.prototype.init = function()
 			{
 				window.clearTimeout(timeoutThread);
 				
-				if (acceptResponse)
-				{
-					EditorUi.logEvent({category: 'ALIVE-CACHE-CHECK', action: 'alive', label:
-						req.getStatus() + '.' + (new Date().getTime() - t0)});
-				}
+//				if (acceptResponse)
+//				{
+//					EditorUi.logEvent({category: 'ALIVE-CACHE-CHECK', action: 'alive', label:
+//						req.getStatus() + '.' + (new Date().getTime() - t0)});
+//				}
 			}));
 		}
 	}
@@ -4335,6 +4372,20 @@ App.prototype.restoreLibraries = function()
 									}
 								}
 							}
+							else if (service == 'S' && this.loadDesktopLib != null)
+							{
+								try
+								{
+									this.loadDesktopLib(decodeURIComponent(id.substring(1)), function(desktopLib)
+									{
+										onload(desktopLib);
+									}, onerror);
+								}
+								catch (e)
+								{
+									onerror();
+								}
+							}
 							else
 							{
 								var peer = null;
@@ -5295,8 +5346,8 @@ App.prototype.updateHeader = function()
 				this.toolbarContainer.appendChild(this.toggleElement);
 			}
 			
-			// Enable compact mode for small screens
-			if (screen.height <= 740 && typeof this.toggleElement.click !== 'undefined')
+			// Enable compact mode for small screens except for Firefox where the height is wrong
+			if (!mxClient.IS_FF && screen.height <= 740 && typeof this.toggleElement.click !== 'undefined')
 			{
 				window.setTimeout(mxUtils.bind(this, function()
 				{

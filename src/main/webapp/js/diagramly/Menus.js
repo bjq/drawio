@@ -130,7 +130,7 @@
 				false, mxResources.get('insert'));
 
 			editorUi.showDialog(dlg.container, 620, 440, true, true);
-		}));
+		})).isEnabled = isGraphEnabled;
 		
 		editorUi.actions.put('exportXml', new Action(mxResources.get('formatXml') + '...', function()
 		{
@@ -208,7 +208,8 @@
 		
 		editorUi.actions.put('exportPdf', new Action(mxResources.get('formatPdf') + '...', function()
 		{
-			if (editorUi.isOffline() || editorUi.printPdfExport)
+			if ((typeof(mxIsElectron5) === 'undefined' || !mxIsElectron5) &&
+				(editorUi.isOffline() || editorUi.printPdfExport))
 			{
 				// Export PDF action for chrome OS (same as print with different dialog title)
 				editorUi.showDialog(new PrintDialog(editorUi, mxResources.get('formatPdf')).container, 360,
@@ -822,8 +823,6 @@
 		// Adds action
 		editorUi.actions.addAction('runLayout', function()
 		{
-			var graph = editorUi.editor.graph;
-			
 	    	var dlg = new TextareaDialog(editorUi, 'Run Layouts:',
 	    		JSON.stringify(editorUi.customLayoutConfig, null, 2),
 	    		function(newValue)
@@ -832,29 +831,9 @@
 				{
 					try
 					{
-						var json = JSON.parse(newValue);
-						
-						for (var i = 0; i < json.length; i++)
-						{
-							var layout = new window[json[i].layout](graph);
-							
-							if (json[i].config != null)
-							{
-								for (var key in json[i].config)
-								{
-									layout[key] = json[i].config[key];
-								}
-							}
-							
-							editorUi.executeLayout(function()
-							{
-								var selectionCells = graph.getSelectionCells();
-								layout.execute(graph.getDefaultParent(), selectionCells.length == 0 ?
-									null : selectionCells);
-							}, i == json.length - 1);
-						}
-						
-						editorUi.customLayoutConfig = json;
+						var layoutList = JSON.parse(newValue);
+						editorUi.executeLayoutList(layoutList)
+						editorUi.customLayoutConfig = layoutList;
 					}
 					catch (e)
 					{
@@ -2321,7 +2300,7 @@
 						// Executed after dialog is added to dom
 						dlg.init();
 					}
-				}), parent);
+				}), parent, null, isGraphEnabled());
 			}
 		};
 		
@@ -2354,23 +2333,22 @@
 	    	return cell;
 		};
 		
-		
 		editorUi.actions.put('exportSvg', new Action(mxResources.get('formatSvg') + '...', function()
+		{
+			editorUi.showExportDialog(mxResources.get('formatSvg'), true, mxResources.get('export'),
+				'https://support.draw.io/display/DO/Exporting+Files',
+				mxUtils.bind(this, function(scale, transparentBackground, ignoreSelection, addShadow,
+					editable, embedImages, border, cropImage, currentPage, linkTarget)
 				{
-					editorUi.showExportDialog(mxResources.get('formatSvg'), true, mxResources.get('export'),
-						'https://support.draw.io/display/DO/Exporting+Files',
-						mxUtils.bind(this, function(scale, transparentBackground, ignoreSelection, addShadow,
-							editable, embedImages, border, cropImage, currentPage, linkTarget)
-						{
-							var val = parseInt(scale);
-							
-							if (!isNaN(val) && val > 0)
-							{
-							   	editorUi.exportSvg(val / 100, transparentBackground, ignoreSelection, addShadow,
-							   		editable, embedImages, border, !cropImage, currentPage, linkTarget);
-							}
-						}), true, null, 'svg');
-				}));
+					var val = parseInt(scale);
+					
+					if (!isNaN(val) && val > 0)
+					{
+					   	editorUi.exportSvg(val / 100, transparentBackground, ignoreSelection, addShadow,
+					   		editable, embedImages, border, !cropImage, currentPage, linkTarget);
+					}
+				}), true, null, 'svg');
+		}));
 		
 		editorUi.actions.put('insertText', new Action(mxResources.get('text'), function()
 		{
@@ -2436,7 +2414,7 @@
 			menu.addItem(mxResources.get('csv') + '...', null, function()
 			{
 				editorUi.showImportCsvDialog();
-			}, parent);
+			}, parent, null, isGraphEnabled());
 		})));
 
 		this.put('insertLayout', new Menu(mxUtils.bind(this, function(menu, parent)

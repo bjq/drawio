@@ -1,6 +1,6 @@
 window.OPEN_URL = 'https://www.draw.io/open';
 window.TEMPLATE_PATH = 'templates';
-window.DRAW_MATH_URL = 'mathjax/src/main/webapp/current';
+window.DRAW_MATH_URL = window.mxIsElectron5? 'math' : 'https://www.draw.io/math';
 FeedbackDialog.feedbackUrl = 'https://log.draw.io/email';
 
 (function()
@@ -87,10 +87,54 @@ FeedbackDialog.feedbackUrl = 'https://log.draw.io/email';
 			editorUi.openLink('https://www.draw.io/')
 		}));
 		
+		this.put('openRecent', new Menu(function(menu, parent)
+		{
+			var recent = editorUi.getRecent();
+
+			if (recent != null)
+			{
+				for (var i = 0; i < recent.length; i++)
+				{
+					(function(entry)
+					{
+						menu.addItem(entry.title, null, function()
+						{
+							function doOpenRecent()
+							{
+								//Simulate opening a file via args
+								editorUi.loadArgs({args: [entry.id]});
+							};
+							
+							var file = editorUi.getCurrentFile();
+							
+							if (file != null && file.isModified())
+							{
+								editorUi.confirm(mxResources.get('allChangesLost'), null, doOpenRecent,
+									mxResources.get('cancel'), mxResources.get('discardChanges'));
+							}
+							else
+							{
+								doOpenRecent();
+							}
+						}, parent);
+					})(recent[i]);
+				}
+
+				menu.addSeparator(parent);
+			}
+
+			menu.addItem(mxResources.get('reset'), null, function()
+			{
+				editorUi.resetRecent();
+			}, parent);
+		}));
+		
 		// Replaces file menu to replace openFrom menu with open and rename downloadAs to export
 		this.put('file', new Menu(mxUtils.bind(this, function(menu, parent)
 		{
-			this.addMenuItems(menu, ['new', 'open', '-', 'synchronize', '-', 'save', 'saveAs', '-', 'import'], parent);
+			this.addMenuItems(menu, ['new', 'open'], parent);
+			this.addSubmenu('openRecent', menu, parent);
+			this.addMenuItems(menu, ['-', 'synchronize', '-', 'save', 'saveAs', '-', 'import'], parent);
 			this.addSubmenu('exportAs', menu, parent);
 			menu.addSeparator(parent);
 			this.addSubmenu('embed', menu, parent);
@@ -416,6 +460,47 @@ FeedbackDialog.feedbackUrl = 'https://log.draw.io/email';
 		}		
 	}
 
+	var origFileLoaded = EditorUi.prototype.fileLoaded;
+	
+	EditorUi.prototype.fileLoaded = function(file)
+	{
+		
+		if (file != null)
+		{
+			if (file.fileObject == null)
+			{
+				var fname = file.getTitle();
+				
+				var fileInfo = openFilesMap[fname];
+				
+				if (fileInfo != null)
+				{
+					file.fileObject = {
+						name: fileInfo.name,
+						path: fileInfo.path,
+						type: fileInfo.type || 'utf-8'
+					};
+					//delete it such that it is not used again incorrectly
+					delete openFilesMap[fname];
+				}
+			}
+			
+			if (file.fileObject != null)
+			{
+				var title = file.fileObject.path;
+				
+				if (title.length > 100)
+				{
+					title = '...' + title.substr(title.length - 97);
+				}
+				
+				this.addRecent({id: file.fileObject.path, title: title});
+			}
+		}
+		
+		origFileLoaded.apply(this, arguments);
+	};
+	
 	// Uses local picker
 	App.prototype.pickFile = function()
 	{
@@ -454,8 +539,7 @@ FeedbackDialog.feedbackUrl = 'https://log.draw.io/email';
 		{
 			try
 			{
-				var library = new LocalLibrary(this, data, fileEntry.name);
-				library.fileObject = fileEntry;
+				var library = new DesktopLibrary(this, data, fileEntry);
 				this.loadLibrary(library);
 			}
 			catch (e)
@@ -487,12 +571,29 @@ FeedbackDialog.feedbackUrl = 'https://log.draw.io/email';
         }
 	};
 
+	//In order not to repeat the logic for opening a file, we collect files information here and use them in openLocalFile
+	var origOpenFiles = EditorUi.prototype.openFiles;
+	var openFilesMap = {};
+	
+	EditorUi.prototype.openFiles = function(files, temp)
+	{
+		openFilesMap = {};
+
+		for (var i = 0; i < files.length; i++)
+		{
+			openFilesMap[files[i].name] = files[i];
+		}
+		
+		origOpenFiles.apply(this, arguments);
+	};
+	
 	App.prototype.readGraphFile = function(fn, fnErr, path)
 	{
 		var fs = require('fs');
 		var index = path.lastIndexOf('.png');
 		var isPng = index > -1 && index == path.length - 4;
-		var encoding = isPng ? 'base64' : 'utf-8'
+		var isVsdx = /\.vsdx$/i.test(path) || /\.vssx$/i.test(path);
+		var encoding = isVsdx? null : (isPng ? 'base64' : 'utf-8');
 
 		fs.readFile(path, encoding, mxUtils.bind(this, function (e, data)
 		{
@@ -502,17 +603,61 @@ FeedbackDialog.feedbackUrl = 'https://log.draw.io/email';
 			}
 			else
 			{
+				var fileEntry = new Object();
+				fileEntry.path = path;
+				fileEntry.name = path.replace(/^.*[\\\/]/, '');
+				fileEntry.type = encoding;
+
+				//VSDX files are imported instead of being open
+				if (isVsdx)
+				{
+					var name = fileEntry.name;
+
+					this.importVisio(data, mxUtils.bind(this, function(xml)
+					{
+						var dot = name.lastIndexOf('.');
+						
+						if (dot >= 0)
+						{
+							name = name.substring(0, name.lastIndexOf('.')) + '.drawio';
+						}
+						else
+						{
+							name = name + '.drawio';
+						}
+						
+						if (xml.substring(0, 10) == '<mxlibrary')
+						{
+							// Creates new temporary file if library is dropped in splash screen
+							if (this.getCurrentFile() == null && urlParams['embed'] != '1')
+							{
+								this.openLocalFile(this.emptyDiagramXml, this.defaultFilename);
+							}
+						
+							try
+			    			{
+								this.loadLibrary(new LocalLibrary(this, xml, name));
+			    			}
+							catch (e)
+			    			{
+			    				this.handleError(e, mxResources.get('errorLoadingFile'));
+			    			}
+						}
+						else
+						{
+							this.openLocalFile(xml, name);
+						}
+					}), null, name);
+					
+					return;
+				}
+				
 				if (isPng)
 				{
 					// Detecting png by extension. Would need https://github.com/mscdex/mmmagic
 					// to do it by inspection
 					data = this.extractGraphModelFromPng('data:image/png;base64,' + data);
 				}
-
-				var fileEntry = new Object();
-				fileEntry.path = path;
-				fileEntry.name = path.replace(/^.*[\\\/]/, '');
-				fileEntry.type = encoding;
 
 				fs.stat(path, function(err, stat)
 				{
@@ -651,11 +796,6 @@ FeedbackDialog.feedbackUrl = 'https://log.draw.io/email';
 		return this.fileObject != null;
 	};
 	
-	LocalLibrary.prototype.isAutosave = function()
-	{
-		return this.fileObject != null;
-	};
-	
 	LocalFile.prototype.getTitle = function()
 	{
 		return (this.fileObject != null) ? this.fileObject.name : this.title;
@@ -676,11 +816,6 @@ FeedbackDialog.feedbackUrl = 'https://log.draw.io/email';
 		this.saveFile(revision, success, error, unloading, overwrite);
 	};
 
-	LocalLibrary.prototype.save = function(revision, success, error)
-	{
-		LocalFile.prototype.saveFile.apply(this, arguments);
-	};
-	
 	LocalFile.prototype.isConflict = function(stat)
 	{
 		return stat != null && this.stat != null && stat.mtimeMs != this.stat.mtimeMs;
@@ -1033,12 +1168,14 @@ FeedbackDialog.feedbackUrl = 'https://log.draw.io/email';
 		{
 			this.response = data;
 			callback();
+			ipcRenderer.send(this.reqType + '-finalize');
 		})
 
 		ipcRenderer.once(this.reqType + '-error', (event, err) => 
 		{
 			this.hasError = true;
 			error(err);
+			ipcRenderer.send(this.reqType + '-finalize');
 		})
 	};
 	
@@ -1055,43 +1192,65 @@ FeedbackDialog.feedbackUrl = 'https://log.draw.io/email';
 	if (mxIsElectron5)
 	{
 		//Direct export to pdf
-		var origCreateDownloadRequest = EditorUi.prototype.createDownloadRequest;
-		
 		EditorUi.prototype.createDownloadRequest = function(filename, format, ignoreSelection, base64, transparent, currentPage)
 		{
-			if (format == 'pdf')
+			var bounds = this.editor.graph.getGraphBounds();
+			
+			// Exports only current page for images that does not contain file data, but for
+			// the other formats with XML included or pdf with all pages, we need to send the complete data and use
+			// the from/to URL parameters to specify the page to be exported.
+			var data = this.getFileData(true, null, null, null, ignoreSelection, currentPage == false? false : format != 'xmlpng');
+			var range = null;
+			var allPages = null;
+			
+			if (bounds.width * bounds.height > MAX_AREA || data.length > MAX_REQUEST_SIZE)
 			{
-				var bounds = this.editor.graph.getGraphBounds();
-				
-				// Exports only current page for images that does not contain file data, but for
-				// the other formats with XML included or pdf with all pages, we need to send the complete data and use
-				// the from/to URL parameters to specify the page to be exported.
-				var data = this.getFileData(true, null, null, null, ignoreSelection, currentPage == false? false : format != 'xmlpng');
-				var allPages = null;
-				
-				if (bounds.width * bounds.height > MAX_AREA || data.length > MAX_REQUEST_SIZE)
-				{
-					throw {message: mxResources.get('drawingTooLarge')};
-				}
-				
-				if (currentPage == false)
-				{
-					allPages = '1';
-				}
-				
-				var bg = this.editor.graph.background;
-				
-				return new mxElectronRequest('pdf-export', {
-					xml: data,
-					bg: (bg != null) ? bg : mxConstants.NONE,
-					filename: (filename != null) ? filename : null,
-					allPages: allPages
-				});
+				throw {message: mxResources.get('drawingTooLarge')};
 			}
-			else
+			
+			var embed = '0';
+			
+			if (format == 'pdf' && currentPage == false)
 			{
-				return origCreateDownloadRequest.apply(this, arguments);
+				allPages = '1';
 			}
+			
+			if (format == 'xmlpng')
+	       	{
+	       		embed = '1';
+	       		format = 'png';
+	       		
+	       		// Finds the current page number
+	       		if (this.pages != null && this.currentPage != null)
+	       		{
+	       			for (var i = 0; i < this.pages.length; i++)
+	       			{
+	       				if (this.pages[i] == this.currentPage)
+	       				{
+	       					range = i;
+	       					break;
+	       				}
+	       			}
+	       		}
+	       	}
+			
+			var bg = this.editor.graph.background;
+			
+			if (format == 'png' && transparent)
+			{
+				bg = mxConstants.NONE;
+			}
+			
+			return new mxElectronRequest('export', {
+				format: format,
+				xml: data,
+				from: range,
+				bg: (bg != null) ? bg : mxConstants.NONE,
+				filename: (filename != null) ? filename : null,
+				allPages: allPages,
+				base64: base64,
+				embedXml: embed
+			});
 		};
 		
 		//Export Dialog Pdf case
@@ -1101,7 +1260,11 @@ FeedbackDialog.feedbackUrl = 'https://log.draw.io/email';
 		{
 			var graph = editorUi.editor.graph;
 			
-			if (format == 'pdf')
+			if (format == 'xml' || format == 'svg')
+			{
+				return origExportFile.apply(this, arguments);
+			}
+			else
 			{
 				var data = editorUi.getFileData(true, null, null, null, null, true);
 	    		var bounds = graph.getGraphBounds();
@@ -1114,13 +1277,15 @@ FeedbackDialog.feedbackUrl = 'https://log.draw.io/email';
 					editorUi.saveRequest(name, format,
 						function(newTitle, base64)
 						{
-							return new mxElectronRequest('pdf-export', {
+							return new mxElectronRequest('export', {
+								format: format,
 								xml: data,
 								bg: (bg != null) ? bg : mxConstants.NONE,
 								filename: (newTitle != null) ? newTitle : null,
 								w: w,
 								h: h,
-								border: b
+								border: b,
+								base64: (base64 || '0')
 							}); 
 						});
 				}
@@ -1128,10 +1293,6 @@ FeedbackDialog.feedbackUrl = 'https://log.draw.io/email';
 				{
 					mxUtils.alert(mxResources.get('drawingTooLarge'));
 				}
-			}
-			else
-			{
-				return origExportFile.apply(this, arguments);
 			}
 		};
 	}
@@ -1147,7 +1308,52 @@ FeedbackDialog.feedbackUrl = 'https://log.draw.io/email';
 		// to give the spinner some time to stop spinning
 		window.setTimeout(mxUtils.bind(this, function()
 		{
-			var path = dialog.showSaveDialog({defaultPath: filename});
+			var dlgConfig = {defaultPath: filename};
+			var filters = null;
+			
+			switch (format)
+			{
+				case 'xmlpng':
+				case 'png':
+					filters = [
+				          { name: 'PNG Images', extensions: ['png'] }
+				       ];
+				break;
+				case 'jpg':
+				case 'jpeg':
+					filters = [
+				          { name: 'JPEG Images', extensions: ['jpg', 'jpeg'] }
+				       ];
+				break;
+				case 'svg':
+					filters = [
+				          { name: 'SVG Images', extensions: ['svg'] }
+				       ];
+				break;
+				case 'pdf':
+					filters = [
+				          { name: 'PDF Documents', extensions: ['pdf'] }
+				       ];
+				break;
+				case 'vsdx':
+					filters = [
+				          { name: 'VSDX Documents', extensions: ['vsdx'] }
+				       ];
+				break;
+				case 'html':
+					filters = [
+				          { name: 'HTML Documents', extensions: ['html'] }
+				       ];
+				break;
+				case 'xml':
+					filters = [
+				          { name: 'XML Documents', extensions: ['xml'] }
+				       ];
+				break;
+			};
+			
+			dlgConfig['filters'] = filters;
+			var path = dialog.showSaveDialog(dlgConfig);
 	
 	        if (path != null)
 	        {
@@ -1176,8 +1382,18 @@ FeedbackDialog.feedbackUrl = 'https://log.draw.io/email';
 		        	}));
 				}
 			}
-		}), 0);
+		}), 50);
 	};
 
 	EditorUi.prototype.addBeforeUnloadListener = function() {};
+	
+	EditorUi.prototype.loadDesktopLib = function(libPath, success, error)
+	{
+		this.readGraphFile(mxUtils.bind(this, function(fileEntry, data, stat)
+		{
+			var library = new DesktopLibrary(this, data, fileEntry);
+			this.loadLibrary(library);
+			success(library);
+		}), error, libPath);
+	};
 })();

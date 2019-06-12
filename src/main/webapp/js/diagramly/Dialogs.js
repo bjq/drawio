@@ -434,7 +434,7 @@ var StorageDialog = function(editorUi, fn, rowLimit)
 				p3.style.fontSize = '9pt';
 				p3.style.marginTop = '-14px';
 				p3.innerHTML = '<a style="background-color:#dcdcdc;padding:5px;color:black;text-decoration:none;" ' +
-					'href="https://plus.google.com/u/0/+DrawIo1/posts/1HTrfsb5wDN" target="_blank">' +
+					'href="https://desk.draw.io/a/solutions/articles/16000074659" target="_blank">' +
 					'<img border="0" src="' + mxGraph.prototype.warningImage.src + '" align="top"> ' +
 					mxResources.get('googleDriveMissingClickHere') + '</a>';
 				div.appendChild(p3);
@@ -6389,7 +6389,7 @@ var TagsWindow = function(editorUi, x, y, w, h)
 
 	function searchCells(cells)
 	{
-		return graph.getCellsForTags(searchInput.value.split(' '), cells, propertyName);
+		return graph.getCellsForTags(searchInput.value.split(' '), cells, propertyName, true);
 	};
 
 	function setCellsVisible(cells, visible)
@@ -6418,7 +6418,18 @@ var TagsWindow = function(editorUi, x, y, w, h)
 		
 		if (graph.isEnabled())
 		{
-			graph.setSelectionCells(cells);
+			// Ignores layers for selection
+			var temp = [];
+			
+			for (var i = 0; i < cells.length; i++)
+			{
+				if (graph.model.isVertex(cells[i]) || graph.model.isEdge(cells[i]))
+				{
+					temp.push(cells[i]);
+				}
+			}
+			
+			graph.setSelectionCells(temp);
 		}
 		else
 		{
