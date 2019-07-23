@@ -1,0 +1,23 @@
+self.location="/src/main/webapp"
+
+<noscript>
+js中url的跳转
+1、在窗体中打开地址
+window.location.href="跳转的地址";
+
+
+2、在新窗体中打开页面用
+window.open("跳转的页面地址")
+
+
+3、可返回对窗口自身的只读引用。等价于 Window 属性。
+self.location="页面地址";
+
+
+4、返回顶层先辈窗口
+top.location="页面地址";
+
+
+5、返回上页
+window.history.back(-1);
+</noscript>
