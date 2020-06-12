@@ -1,5 +1,5 @@
 /**
- * Draw.io Diagrams Sheets add-on v1.0
+ * diagrams.net Diagrams Sheets add-on v1.0
  * Copyright (c) 2019, JGraph Ltd
  */
 var EXPORT_URL = "https://exp.draw.io/ImageExport4/export";
@@ -41,7 +41,7 @@ function onInstall()
  * @return {string} The user's OAuth 2.0 access token.
  */
 function getOAuthToken() {
-  DriveApp.getRootFolder();
+  DriveApp.getFolders();
   return ScriptApp.getOAuthToken();
 }
 
@@ -53,7 +53,17 @@ function insertDiagrams()
   var html = HtmlService.createHtmlOutputFromFile('Picker.html')
       .setWidth(620).setHeight(440)
       .setSandboxMode(HtmlService.SandboxMode.IFRAME);
-  SpreadsheetApp.getUi().showModalDialog(html, 'Select draw.io Diagrams:');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Select Diagrams:');
+}
+
+function refreshSheet()
+{
+  var cur = SpreadsheetApp.getActiveSheet();
+  var dummy = SpreadsheetApp.getActive().insertSheet("Working...");
+  SpreadsheetApp.setActiveSheet(dummy);
+  SpreadsheetApp.flush();
+  SpreadsheetApp.setActiveSheet(cur, true);
+  SpreadsheetApp.getActive().deleteSheet(dummy);
 }
 
 /**
@@ -112,9 +122,8 @@ function pickerHandler(items)
         msg += errors.join("\n");
         SpreadsheetApp.getUi().alert(msg);
       }
-
-      //Trying to refresh but it doesn't work!
-      SpreadsheetApp.flush();
+    
+      refreshSheet();
   }
 }
 
@@ -128,7 +137,7 @@ function insertDiagram(id, page, col, row)
   var blob = result[0];
   var w = result[1];
   var h = result[2];
-  var s = result[3];
+  var s = result[3] < 1? 1: result[3];
   var img = null;
   
   if (blob != null)
@@ -241,6 +250,7 @@ function updateElements(elts)
       if (updated > 0)
       {
         msg += updated + " diagram" + ((updated > 1) ? "s" : "") + " updated\n";
+        refreshSheet();
       }
       
       if (errors.length > 0)
@@ -366,7 +376,7 @@ function updateDiagram(id, page, scale, elt, pageId)
     var blob = result[0];
     var w = result[1];
     var h = result[2];
-    var s = result[3];
+    var s = result[3] < 1? 1: result[3];
     
     if (blob != null)
     {
@@ -374,7 +384,6 @@ function updateDiagram(id, page, scale, elt, pageId)
 
       // replace image with the same link
       var img = elt.replace(blob);
-      //TODO needs refresh after setting image dimensions
       img.setWidth( w / s );
 	  img.setHeight( h / s );
       var link = createLink(id, page, result[4], scale);
@@ -406,7 +415,7 @@ function fetchImage(id, page, scale, pageId)
 		  "format": "png",
           "scale": scale || "1",
 		  "xml": fileData,
-		  "extras": "{\"isPng\": " + isPng + ", \"isGoogleApp\": true}"
+		  "extras": "{\"isPng\": " + isPng + ", \"isGoogleApp\": true, \"isGoogleSheet\": true}"
 		};
     
     	if (pageId != null)

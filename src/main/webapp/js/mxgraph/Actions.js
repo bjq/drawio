@@ -1,7 +1,7 @@
 /**
- * Copyright (c) 2006-2012, JGraph Ltd
- */
-/**
+ * Copyright (c) 2006-2020, JGraph Ltd
+ * Copyright (c) 2006-2020, draw.io AG
+ *
  * Constructs the actions object for the given UI.
  */
 function Actions(editorUi)
@@ -65,7 +65,7 @@ Actions.prototype.init = function()
 	}).isEnabled = isGraphEnabled;
 	this.addAction('save', function() { ui.saveFile(false); }, null, null, Editor.ctrlKey + '+S').isEnabled = isGraphEnabled;
 	this.addAction('saveAs...', function() { ui.saveFile(true); }, null, null, Editor.ctrlKey + '+Shift+S').isEnabled = isGraphEnabled;
-	this.addAction('export...', function() { ui.showDialog(new ExportDialog(ui).container, 300, 230, true, true); });
+	this.addAction('export...', function() { ui.showDialog(new ExportDialog(ui).container, 300, 296, true, true); });
 	this.addAction('editDiagram...', function()
 	{
 		var dlg = new EditDiagramDialog(ui);
@@ -80,7 +80,17 @@ Actions.prototype.init = function()
 	this.addAction('undo', function() { ui.undo(); }, null, 'sprite-undo', Editor.ctrlKey + '+Z');
 	this.addAction('redo', function() { ui.redo(); }, null, 'sprite-redo', (!mxClient.IS_WIN) ? Editor.ctrlKey + '+Shift+Z' : Editor.ctrlKey + '+Y');
 	this.addAction('cut', function() { mxClipboard.cut(graph); }, null, 'sprite-cut', Editor.ctrlKey + '+X');
-	this.addAction('copy', function() { mxClipboard.copy(graph); }, null, 'sprite-copy', Editor.ctrlKey + '+C');
+	this.addAction('copy', function()
+	{
+		try
+		{
+			mxClipboard.copy(graph);
+		}
+		catch (e)
+		{
+			ui.handleError(e);
+		}
+	}, null, 'sprite-copy', Editor.ctrlKey + '+C');
 	this.addAction('paste', function()
 	{
 		if (graph.isEnabled() && !graph.isCellLocked(graph.getDefaultParent()))
@@ -153,7 +163,7 @@ Actions.prototype.init = function()
 				ui.copiedSize = new mxRectangle(geo.x, geo.y, geo.width, geo.height);
 			}
 		}
-	}, null, null, 'Alt+Shit+X');
+	}, null, null, 'Alt+Shift+X');
 
 	this.addAction('pasteSize', function(evt)
 	{
@@ -187,36 +197,17 @@ Actions.prototype.init = function()
 				graph.getModel().endUpdate();
 			}
 		}
-	}, null, null, 'Alt+Shit+V');
+	}, null, null, 'Alt+Shift+V');
 	
 	function deleteCells(includeEdges)
 	{
 		// Cancels interactive operations
 		graph.escape();
-		var cells = graph.getDeletableCells(graph.getSelectionCells());
+		var select = graph.deleteCells(graph.getDeletableCells(graph.getSelectionCells()), includeEdges);
 		
-		if (cells != null && cells.length > 0)
+		if (select != null)
 		{
-			var parents = graph.model.getParents(cells);
-			graph.removeCells(cells, includeEdges);
-			
-			// Selects parents for easier editing of groups
-			if (parents != null)
-			{
-				var select = [];
-				
-				for (var i = 0; i < parents.length; i++)
-				{
-					if (graph.model.contains(parents[i]) &&
-						(graph.model.isVertex(parents[i]) ||
-						graph.model.isEdge(parents[i])))
-					{
-						select.push(parents[i]);
-					}
-				}
-				
-				graph.setSelectionCells(select);
-			}
+			graph.setSelectionCells(select);
 		}
 	};
 	
@@ -230,13 +221,20 @@ Actions.prototype.init = function()
 	}, null, null, Editor.ctrlKey + '+Delete');
 	this.addAction('duplicate', function()
 	{
-		graph.setSelectionCells(graph.duplicateCells());
+		try
+		{
+			graph.setSelectionCells(graph.duplicateCells());
+		}
+		catch (e)
+		{
+			ui.handleError(e);
+		}
 	}, null, null, Editor.ctrlKey + '+D');
-	this.put('turn', new Action(mxResources.get('turn') + ' / ' + mxResources.get('reverse'), function()
+	this.put('turn', new Action(mxResources.get('turn') + ' / ' + mxResources.get('reverse'), function(evt)
 	{
-		graph.turnShapes(graph.getSelectionCells());
+		graph.turnShapes(graph.getSelectionCells(), (evt != null) ? mxEvent.isShiftDown(evt) : false);
 	}, null, null, Editor.ctrlKey + '+R'));
-	this.addAction('selectVertices', function() { graph.selectVertices(); }, null, null, Editor.ctrlKey + '+Shift+I');
+	this.addAction('selectVertices', function() { graph.selectVertices(null, true); }, null, null, Editor.ctrlKey + '+Shift+I');
 	this.addAction('selectEdges', function() { graph.selectEdges(); }, null, null, Editor.ctrlKey + '+Shift+E');
 	this.addAction('selectAll', function() { graph.selectAll(null, true); }, null, null, Editor.ctrlKey + '+A');
 	this.addAction('selectNone', function() { graph.clearSelection(); }, null, null, Editor.ctrlKey + '+Shift+A');
@@ -263,7 +261,7 @@ Actions.prototype.init = function()
 	}, null, null, Editor.ctrlKey + '+L');
 
 	// Navigation actions
-	this.addAction('home', function() { graph.home(); }, null, null, 'Home');
+	this.addAction('home', function() { graph.home(); }, null, null, 'Shift+Home');
 	this.addAction('exitGroup', function() { graph.exitGroup(); }, null, null, Editor.ctrlKey + '+Shift+Home');
 	this.addAction('enterGroup', function() { graph.enterGroup(); }, null, null, Editor.ctrlKey + '+Shift+End');
 	this.addAction('collapse', function() { graph.foldCells(true); }, null, null, Editor.ctrlKey + '+Home');
@@ -521,54 +519,65 @@ Actions.prototype.init = function()
 	}, null, null, Editor.ctrlKey + '+Shift+Y');
 	this.addAction('formattedText', function()
 	{
-    	var state = graph.getView().getState(graph.getSelectionCell());
+    	var refState = graph.getView().getState(graph.getSelectionCell());
     	
-    	if (state != null)
+    	if (refState != null)
     	{
-	    	var value = '1';
 	    	graph.stopEditing();
+    		var value = (refState.style['html'] == '1') ? null : '1';
 			
 			graph.getModel().beginUpdate();
 			try
 			{
-		    	if (state.style['html'] == '1')
-		    	{
-		    		value = null;
-		    		var label = graph.convertValueToString(state.cell);
-		    		
-		    		if (mxUtils.getValue(state.style, 'nl2Br', '1') != '0')
+				var cells = graph.getSelectionCells();
+				
+				for (var i = 0; i < cells.length; i++)
+				{
+					state = graph.getView().getState(cells[i]);
+					
+					if (state != null)
 					{
-						// Removes newlines from HTML and converts breaks to newlines
-						// to match the HTML output in plain text
-						label = label.replace(/\n/g, '').replace(/<br\s*.?>/g, '\n');
+						var html = mxUtils.getValue(state.style, 'html', '0');
+						
+						if (html == '1' && value == null)
+				    	{
+				    		var label = graph.convertValueToString(state.cell);
+				    		
+				    		if (mxUtils.getValue(state.style, 'nl2Br', '1') != '0')
+							{
+								// Removes newlines from HTML and converts breaks to newlines
+								// to match the HTML output in plain text
+								label = label.replace(/\n/g, '').replace(/<br\s*.?>/g, '\n');
+							}
+				    		
+				    		// Removes HTML tags
+			    			var temp = document.createElement('div');
+			    			temp.innerHTML = graph.sanitizeHtml(label);
+			    			label = mxUtils.extractTextWithWhitespace(temp.childNodes);
+			    			
+							graph.cellLabelChanged(state.cell, label);
+							graph.setCellStyles('html', value, [cells[i]]);
+				    	}
+						else if (html == '0' && value == '1')
+				    	{
+				    		// Converts HTML tags to text
+				    		var label = mxUtils.htmlEntities(graph.convertValueToString(state.cell), false);
+				    		
+				    		if (mxUtils.getValue(state.style, 'nl2Br', '1') != '0')
+							{
+								// Converts newlines in plain text to breaks in HTML
+								// to match the plain text output
+				    			label = label.replace(/\n/g, '<br/>');
+							}
+				    		
+				    		graph.cellLabelChanged(state.cell, graph.sanitizeHtml(label));
+				    		graph.setCellStyles('html', value, [cells[i]]);
+				    	}
 					}
-		    		
-		    		// Removes HTML tags
-	    			var temp = document.createElement('div');
-	    			temp.innerHTML = label;
-	    			label = mxUtils.extractTextWithWhitespace(temp.childNodes);
-	    			
-					graph.cellLabelChanged(state.cell, label);
-		    	}
-		    	else
-		    	{
-		    		// Converts HTML tags to text
-		    		var label = mxUtils.htmlEntities(graph.convertValueToString(state.cell), false);
-		    		
-		    		if (mxUtils.getValue(state.style, 'nl2Br', '1') != '0')
-					{
-						// Converts newlines in plain text to breaks in HTML
-						// to match the plain text output
-		    			label = label.replace(/\n/g, '<br/>');
-					}
-		    		
-		    		graph.cellLabelChanged(state.cell, graph.sanitizeHtml(label));
-		    	}
-		
-		       	graph.setCellStyles('html', value);
+				}
+
 				ui.fireEvent(new mxEventObject('styleChanged', 'keys', ['html'],
-						'values', [(value != null) ? value : '0'], 'cells',
-						graph.getSelectionCells()));
+					'values', [(value != null) ? value : '0'], 'cells', cells));
 			}
 			finally
 			{
@@ -616,10 +625,52 @@ Actions.prototype.init = function()
 	{
 		graph.zoomTo(1);
 		ui.resetScrollbars();
-	}, null, null, Editor.ctrlKey + '+H');
-	this.addAction('zoomIn', function(evt) { graph.zoomIn(); }, null, null, Editor.ctrlKey + ' + (Numpad) / Alt+Mousewheel');
-	this.addAction('zoomOut', function(evt) { graph.zoomOut(); }, null, null, Editor.ctrlKey + ' - (Numpad) / Alt+Mousewheel');
-	this.addAction('fitWindow', function() { graph.fit(); }, null, null, Editor.ctrlKey + '+Shift+H');
+	}, null, null, 'Home');
+	this.addAction('zoomIn', function(evt)
+	{
+		if (graph.isFastZoomEnabled())
+		{
+			graph.lazyZoom(true, true, ui.buttonZoomDelay);
+		}
+		else
+		{
+			graph.zoomIn();
+		}
+	}, null, null, Editor.ctrlKey + ' + (Numpad) / Alt+Mousewheel');
+	this.addAction('zoomOut', function(evt)
+	{
+		if (graph.isFastZoomEnabled())
+		{
+			graph.lazyZoom(false, true, ui.buttonZoomDelay);
+		}
+		else
+		{
+			graph.zoomOut();
+		}
+	}, null, null, Editor.ctrlKey + ' - (Numpad) / Alt+Mousewheel');
+	this.addAction('fitWindow', function()
+	{
+		var bounds = (graph.isSelectionEmpty()) ? graph.getGraphBounds() : graph.getBoundingBox(graph.getSelectionCells());
+		var t = graph.view.translate;
+		var s = graph.view.scale;
+		bounds.width /= s;
+		bounds.height /= s;
+		bounds.x = bounds.x / s - t.x;
+		bounds.y = bounds.y / s - t.y;
+		
+		var cw = graph.container.clientWidth - 10;
+		var ch = graph.container.clientHeight - 10;
+		var scale = Math.floor(20 * Math.min(cw / bounds.width, ch / bounds.height)) / 20;
+		graph.zoomTo(scale);
+
+		if (mxUtils.hasScrollbars(graph.container))
+		{
+			graph.container.scrollTop = (bounds.y + t.y) * scale -
+				Math.max((ch - bounds.height * scale) / 2 + 5, 0);
+			graph.container.scrollLeft = (bounds.x + t.x) * scale -
+				Math.max((cw - bounds.width * scale) / 2 + 5, 0);
+		}
+	}, null, null, Editor.ctrlKey + '+Shift+H');
 	this.addAction('fitPage', mxUtils.bind(this, function()
 	{
 		if (!graph.pageVisible)
@@ -706,7 +757,11 @@ Actions.prototype.init = function()
 			
 			if (!isNaN(val) && val > 0)
 			{
-				ui.setPageScale(val / 100);
+				var change = new ChangePageSetup(ui, null, null, null, val / 100);
+				change.ignoreColor = true;
+				change.ignoreImage = true;
+				
+				graph.model.execute(change);
 			}
 		}), mxResources.get('pageScale') + ' (%)');
 		this.editorUi.showDialog(dlg.container, 300, 80, true, true);
@@ -821,7 +876,7 @@ Actions.prototype.init = function()
 			
 			showingAbout = true;
 		}
-	}, null, null, 'F1'));
+	}));
 	
 	// Font style actions
 	var toggleFontStyle = mxUtils.bind(this, function(key, style, fn, shortcut)
@@ -839,7 +894,8 @@ Actions.prototype.init = function()
 				graph.getModel().beginUpdate();
 				try
 				{
-					graph.toggleCellStyleFlags(mxConstants.STYLE_FONTSTYLE, style);
+					var cells = graph.getSelectionCells();
+					graph.toggleCellStyleFlags(mxConstants.STYLE_FONTSTYLE, style, cells);
 					
 					// Removes bold and italic tags and CSS styles inside labels
 					if ((style & mxConstants.FONT_BOLD) == mxConstants.FONT_BOLD)
@@ -877,6 +933,14 @@ Actions.prototype.init = function()
 								graph.replaceElement(elt);
 							}
 						});
+					}
+					
+					for (var i = 0; i < cells.length; i++)
+					{
+						if (graph.model.getChildCount(cells[i]) == 0)
+						{
+							graph.autoSizeCell(cells[i], false);
+						}
 					}
 				}
 				finally
@@ -985,8 +1049,7 @@ Actions.prototype.init = function()
 			try
 			{
 				var cells = graph.getSelectionCells();
-	    		var state = graph.view.getState(cells[0]);
-	    		var style = (state != null) ? state.style : graph.getCellStyle(cells[0]);
+	    		var style = graph.getCurrentCellStyle(cells[0]);
 	    		var value = (mxUtils.getValue(style, mxConstants.STYLE_ROUNDED, '0') == '1') ? '0' : '1';
 	    		
 				graph.setCellStyles(mxConstants.STYLE_ROUNDED, value);
@@ -1156,6 +1219,15 @@ Actions.prototype.init = function()
 			document.execCommand('superscript', false, null);
 		}
 	}), null, null, Editor.ctrlKey + '+.');
+	action = this.addAction('indent', mxUtils.bind(this, function()
+	{
+		// NOTE: Alt+Tab for outdent implemented via special code in
+		// keyHandler.getFunction in EditorUi.js. Ctrl+Tab is reserved.
+	    if (graph.cellEditor.isContentEditing())
+	    {
+			document.execCommand('indent', false, null);
+		}
+	}), null, null, 'Shift+Tab');
 	this.addAction('image...', function()
 	{
 		if (graph.isEnabled() && !graph.isCellLocked(graph.getDefaultParent()))
@@ -1203,8 +1275,7 @@ Actions.prototype.init = function()
 			        		graph.setCellStyles(mxConstants.STYLE_IMAGE, (newValue.length > 0) ? newValue : null, cells);
 			        		
 			        		// Sets shape only if not already shape with image (label or image)
-			        		var state = graph.view.getState(cells[0]);
-			        		var style = (state != null) ? state.style : graph.getCellStyle(cells[0]);
+			        		var style = graph.getCurrentCellStyle(cells[0]);
 			        		
 			        		if (style[mxConstants.STYLE_SHAPE] != 'image' && style[mxConstants.STYLE_SHAPE] != 'label')
 			        		{
@@ -1252,7 +1323,7 @@ Actions.prototype.init = function()
 		if (this.layersWindow == null)
 		{
 			// LATER: Check outline window for initial placement
-			this.layersWindow = new LayersWindow(ui, document.body.offsetWidth - 280, 120, 220, 180);
+			this.layersWindow = new LayersWindow(ui, document.body.offsetWidth - 280, 120, 220, 196);
 			this.layersWindow.window.addListener('show', function()
 			{
 				ui.fireEvent(new mxEventObject('layers'));
@@ -1263,6 +1334,8 @@ Actions.prototype.init = function()
 			});
 			this.layersWindow.window.setVisible(true);
 			ui.fireEvent(new mxEventObject('layers'));
+			
+			this.layersWindow.init();
 		}
 		else
 		{

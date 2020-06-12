@@ -5,10 +5,34 @@
 (function()
 {
 	/**
+	 * Enables paste from Lucidchart
+	 */
+	if (typeof html4 !== 'undefined')
+	{
+		html4.ATTRIBS["span::data-lucid-content"] = 0;
+		html4.ATTRIBS["span::data-lucid-type"] = 0;
+	}
+
+	/**
 	 * Specifies the app name. Default is document.title.
 	 */
-	Editor.prototype.appName = 'draw.io';
+	Editor.prototype.appName = 'diagrams.net';
+		
+	/**
+	 * Known file types.
+	 */
+	Editor.prototype.diagramFileTypes = [
+		{description: 'diagramXmlDesc', extension: 'drawio'},
+		{description: 'diagramPngDesc', extension: 'png'},
+		{description: 'diagramSvgDesc', extension: 'svg'},
+		{description: 'diagramHtmlDesc', extension: 'html'},
+		{description: 'diagramXmlDesc', extension: 'xml'}];
 	
+	/**
+	 * Known file types.
+	 */
+	Editor.prototype.libraryFileTypes = [{description: 'Library (.drawiolib, .xml)', extensions: ['drawiolib', 'xml']}];
+
 	/**
 	 * Known extensions for own files.
 	 */
@@ -16,7 +40,7 @@
 		{ext: 'html', title: 'filetypeHtml'},
 		{ext: 'png', title: 'filetypePng'},
 		{ext: 'svg', title: 'filetypeSvg'}];
-	
+
 	/**
 	 * Used in the GraphViewer lightbox.
 	 */
@@ -103,6 +127,11 @@
 	Editor.cameraLargeImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAAlwSFlzAAALEwAACxMBAJqcGAAAAVlpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IlhNUCBDb3JlIDUuNC4wIj4KICAgPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgICAgICAgICAgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iPgogICAgICAgICA8dGlmZjpPcmllbnRhdGlvbj4xPC90aWZmOk9yaWVudGF0aW9uPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4KTMInWQAAA/BJREFUWAnFl0uIjWEYx885buPSuGwmSYwtwsY1ikKSNYNclmQnadgrZSPlsnBLSlaGBdNYKY0Vdi4L4zYzIqxGxmXG//d+7//0+uY7nWMiT/2/53mf+3v7vnNKpf9M5UbrDw8Pj4m+wzmeT1FBUS6Xf+YNox6reMONukijMXUTM3NmI75PyXcJPwRWg5kS7xysDLNmfEUxpx2rceNE50IlYjyRklcLf0prY+x4BTqfmx3ZUHQaO9ISGngYq38V/1EH+ECPa+QaK1u1kVBQirDMChiS3CTeIkwWvghtwhKBpZ8g1CO2B99FynVU/KowSRgQ3mlrBsVZ1awmQlS0SGbfXglfBPbdRGMm5O8RXg2P835pDCvzWjghTHETcLpZLHwS8kTCtBEK1SN83Egam8YxyVZqc+Do5qkwS+gT9grNwkUBG6cbsG/gs3BTuC/0ChCxq4QtwgzBMdwUZBPyN4Ftfi4sYPZHktbOSRlIuutRP5jYj0ueZp88xyYcS/zZoiLyQT1IA/cTj7eSlwnrhI+JnkQbCwo2Sx/2M7VJt17wdhVtgxvrpoFnAuSAbJQ97biZAlKxBfD9wgOhV+BgIR/AZtJ4kwD5PGSj7OmmekjWEy0oAQHAS3+KpBpzXqYK3UItopHpSRMno2N+cm7gDYnfRCcr3QBqriMHLJDkeyhFfiG5aVbK+8rhtP9M6QcIEJHX5Fp9NMAyQlYiu+OOJNlODCIXyka/P23bncTdiC7OydC1+v1Bsb+5r84DK8S3Rdmf5cRUFW3bXtWUSt1Rdk6G4SyJV2o1YId+vNUxr+x5yCJiapFtcxQzLjrxboGcMxvFJwEOKnLwjIbkx/sdSmeSaUY++SwTAxV+4DJT7RVwkbk46gNCsifIItuy0e9PF33Cb4homhN5YRyzL5q5V2VNkv98kqgoGTo3YF9CnMM5Y5rItFfvBSi9JulVXOgI+VwIntkt+SaZ6weQfcovJf7zpTfl86P/wAF7Fz18NeKwmvAWCaX0Z/uMHQr42ZxvR/Rxcw5xM+9J/CJq8w2gduDhmDgso/QrBH47dEXQ1IqczyHpIOfIRtnTtV7SwO1oKXKkU3fbToFGSDHtMWcaH1WBuVYnDbRFi99iqSMySdzxXckrazUh23KBVYGIcfNBkTxca0e4ATJ0KukGYVBgr/MnlhPOtQq/ksUfCbzh+EFCjtnCUoHfjhA/OsiTv2HcEvJMELp0VakZDliTmriTdPivxU4VmEhtPrGV+KJhO7ZKt0doFZh1fgZSBWIW2AGEHwg3BUWOnKtH+suqdw07tYMfglCrWPD5mw9qVYuniaXkT0OtWaSuo5LJTY1RBf+roF9X5+y/5qU+DAAAAABJRU5ErkJggg==';
 	
 	/**
+	 * Broken image symbol for offline SVG.
+	 */
+	Editor.svgBrokenImage = Graph.createSvgImage(10, 10, '<rect x="0" y="0" width="10" height="10" stroke="#000" fill="transparent"/><path d="m 0 0 L 10 10 L 0 10 L 10 0" stroke="#000" fill="transparent"/>');
+
+	/**
 	 * Default value for custom libraries in mxSettings.
 	 */
 	Editor.defaultCustomLibraries = [];
@@ -118,25 +147,54 @@
 	Editor.enableCustomProperties = true;
 
 	/**
+	 * Specifies if XML files should be compressed. Default is true.
+	 */
+	Editor.compressXml = true;
+
+	/**
+	 * Specifies global variables.
+	 */
+	Editor.globalVars = null;
+
+	/**
+	 * Disables the shadow option in the format panel.
+	 */
+	Editor.shadowOptionEnabled = !mxClient.IS_SF;
+
+	/**
+	 * Reference to the config object passed to <configure>.
+	 */
+	Editor.config = null;
+
+	/**
+	 * Reference to the version of the last config object in
+	 * <configure>. If this is different to the last version in
+	 * mxSettings.parse, then the settings are reset.
+	 */
+	Editor.configVersion = null;
+	
+	/**
 	 * Common properties for all edges.
 	 */
 	Editor.commonEdgeProperties = [
         {type: 'separator'},
         {name: 'arcSize', dispName: 'Arc Size', type: 'float', min:0, defVal: mxConstants.LINE_ARCSIZE},
-        {name: 'targetPortConstraint', dispName: 'Target Port Constraint', type: 'enum', defVal: 'none',
-        	enumList: [{val: 'none', dispName: 'None'}, {val: 'east', dispName: 'East'}, {val: 'north', dispName: 'North'}, {val: 'south', dispName: 'South'}, {val: 'west', dispName: 'West'}]
+        {name: 'sourcePortConstraint', dispName: 'Source Constraint', type: 'enum', defVal: 'none',
+        	enumList: [{val: 'none', dispName: 'None'}, {val: 'north', dispName: 'North'}, {val: 'east', dispName: 'East'}, {val: 'south', dispName: 'South'}, {val: 'west', dispName: 'West'}]
         },
-        {name: 'sourcePortConstraint', dispName: 'Source Port Constraint', type: 'enum', defVal: 'none',
-        	enumList: [{val: 'none', dispName: 'None'}, {val: 'east', dispName: 'East'}, {val: 'north', dispName: 'North'}, {val: 'south', dispName: 'South'}, {val: 'west', dispName: 'West'}]
+        {name: 'targetPortConstraint', dispName: 'Target Constraint', type: 'enum', defVal: 'none',
+        	enumList: [{val: 'none', dispName: 'None'}, {val: 'north', dispName: 'North'}, {val: 'east', dispName: 'East'}, {val: 'south', dispName: 'South'}, {val: 'west', dispName: 'West'}]
         },
+        {name: 'jettySize', dispName: 'Jetty Size', type: 'int', min: 0, defVal: 'auto', allowAuto: true, isVisible: function(state)
+        {
+    		return mxUtils.getValue(state.style, mxConstants.STYLE_EDGE, null) == 'orthogonalEdgeStyle';
+        }},
         {name: 'fillOpacity', dispName: 'Fill Opacity', type: 'int', min: 0, max: 100, defVal: 100},
         {name: 'strokeOpacity', dispName: 'Stroke Opacity', type: 'int', min: 0, max: 100, defVal: 100},
         {name: 'startFill', dispName: 'Start Fill', type: 'bool', defVal: true},
         {name: 'endFill', dispName: 'End Fill', type: 'bool', defVal: true},
-        {name: 'sourcePerimeterSpacing', dispName: 'Source Perimeter Spacing', type: 'float', defVal: 0},
-        {name: 'targetPerimeterSpacing', dispName: 'Target Perimeter Spacing', type: 'float', defVal: 0},
-        {name: 'perimeterSpacing', dispName: 'Perimeter Spacing', type: 'float', defVal: 0},
-        {name: 'anchorPointDirection', dispName: 'Anchor Point Direction', type: 'bool', defVal: true},
+        {name: 'perimeterSpacing', dispName: 'Terminal Spacing', type: 'float', defVal: 0},
+        {name: 'anchorPointDirection', dispName: 'Anchor Direction', type: 'bool', defVal: true},
         {name: 'snapToPoint', dispName: 'Snap to Point', type: 'bool', defVal: false},
         {name: 'fixDash', dispName: 'Fixed Dash', type: 'bool', defVal: false},
         {name: 'jiggle', dispName: 'Jiggle', type: 'float', min: 0, defVal: 1.5, isVisible: function(state)
@@ -158,6 +216,34 @@
 	 */
 	Editor.commonVertexProperties = [
         {type: 'separator'},
+        {name: 'resizeLastRow', dispName: 'Resize Last Row', type: 'bool', getDefaultValue: function(state, format)
+        {
+        	var cell = (state.vertices.length == 1 && state.edges.length == 0) ? state.vertices[0] : null;
+        	var graph = format.editorUi.editor.graph;
+        	var style = graph.getCellStyle(cell);
+        	
+        	return mxUtils.getValue(style, 'resizeLastRow', '0') == '1';
+        }, isVisible: function(state, format)
+        {
+        	var graph = format.editorUi.editor.graph;
+        	
+    		return state.vertices.length == 1 && state.edges.length == 0 &&
+    			graph.isTable(state.vertices[0]);
+        }},
+        {name: 'resizeLast', dispName: 'Resize Last Column', type: 'bool', getDefaultValue: function(state, format)
+        {
+        	var cell = (state.vertices.length == 1 && state.edges.length == 0) ? state.vertices[0] : null;
+        	var graph = format.editorUi.editor.graph;
+        	var style = graph.getCellStyle(cell);
+        	
+        	return mxUtils.getValue(style, 'resizeLast', '0') == '1';
+        }, isVisible: function(state, format)
+        {
+        	var graph = format.editorUi.editor.graph;
+        	
+    		return state.vertices.length == 1 && state.edges.length == 0 &&
+    			graph.isTable(state.vertices[0]);
+        }},
         {name: 'fillOpacity', dispName: 'Fill Opacity', type: 'int', min: 0, max: 100, defVal: 100},
         {name: 'strokeOpacity', dispName: 'Stroke Opacity', type: 'int', min: 0, max: 100, defVal: 100},
         {name: 'overflow', dispName: 'Text Overflow', defVal: 'visible', type: 'enum',
@@ -166,13 +252,23 @@
         {name: 'noLabel', dispName: 'Hide Label', type: 'bool', defVal: false},
         {name: 'labelPadding', dispName: 'Label Padding', type: 'float', defVal: 0},
         {name: 'direction', dispName: 'Direction', type: 'enum', defVal: 'east',
-        	enumList: [{val: 'east', dispName: 'East'}, {val: 'north', dispName: 'North'}, {val: 'south', dispName: 'South'}, {val: 'west', dispName: 'West'}]
+        	enumList: [{val: 'north', dispName: 'North'}, {val: 'east', dispName: 'East'}, {val: 'south', dispName: 'South'}, {val: 'west', dispName: 'West'}]
         },
-        {name: 'portConstraint', dispName: 'Port Constraint', type: 'enum', defVal: 'none',
-        	enumList: [{val: 'none', dispName: 'None'}, {val: 'east', dispName: 'East'}, {val: 'north', dispName: 'North'}, {val: 'south', dispName: 'South'}, {val: 'west', dispName: 'West'}]
+        {name: 'portConstraint', dispName: 'Constraint', type: 'enum', defVal: 'none',
+        	enumList: [{val: 'none', dispName: 'None'}, {val: 'north', dispName: 'North'}, {val: 'east', dispName: 'East'}, {val: 'south', dispName: 'South'}, {val: 'west', dispName: 'West'}]
         },
-        {name: 'portConstraintRotation', dispName: 'Port Const. Rot.', type: 'bool', defVal: false},
-        {name: 'connectable', dispName: 'Connectable', type: 'bool', defVal: true},
+        {name: 'portConstraintRotation', dispName: 'Rotate Constraint', type: 'bool', defVal: false},
+        {name: 'connectable', dispName: 'Connectable', type: 'bool', getDefaultValue: function(state, format)
+        {
+        	var cell = (state.vertices.length == 1 && state.edges.length == 0) ? state.vertices[0] : null;
+        	var graph = format.editorUi.editor.graph;
+        	
+        	return graph.isCellConnectable(cell);
+        }, isVisible: function(state, format)
+        {
+    		return state.vertices.length == 1 && state.edges.length == 0;
+        }},
+        {name: 'allowArrows', dispName: 'Allow Arrows', type: 'bool', defVal: true},
         {name: 'snapToPoint', dispName: 'Snap to Point', type: 'bool', defVal: false},
         {name: 'perimeter', dispName: 'Perimeter', defVal: 'none', type: 'enum',
         	enumList: [{val: 'none', dispName: 'None'},
@@ -184,24 +280,77 @@
         			{val: 'trapezoidPerimeter', dispName: 'Trapezoid'}, {val: 'stepPerimeter', dispName: 'Step'}]
         },
         {name: 'fixDash', dispName: 'Fixed Dash', type: 'bool', defVal: false},
-        {name: 'jiggle', dispName: 'Jiggle', type: 'float', min: 0, defVal: 1.5, isVisible: function(state)
+        {name: 'jiggle', dispName: 'Jiggle', type: 'float', min: 0, defVal: 1.5, isVisible: function(state, format)
         {
         	return mxUtils.getValue(state.style, 'comic', '0') == '1';
         }},
         {name: 'autosize', dispName: 'Autosize', type: 'bool', defVal: false},
-        {name: 'collapsible', dispName: 'Collapsible', type: 'bool', defVal: false},
-        {name: 'container', dispName: 'Container', type: 'bool', defVal: false},
-        {name: 'recursiveResize', dispName: 'Resize Children', type: 'bool', defVal: true},
-        {name: 'part', dispName: 'Part', type: 'bool', defVal: false},
+        {name: 'container', dispName: 'Container', type: 'bool', defVal: false, isVisible: function(state, format)
+        {
+    		return state.vertices.length == 1 && state.edges.length == 0;
+        }},
+        {name: 'dropTarget', dispName: 'Drop Target', type: 'bool', getDefaultValue: function(state, format)
+        {
+        	var cell = (state.vertices.length == 1 && state.edges.length == 0) ? state.vertices[0] : null;
+        	var graph = format.editorUi.editor.graph;
+        	
+        	return cell != null && (graph.isSwimlane(cell) || graph.model.getChildCount(cell) > 0);
+        }, isVisible: function(state, format)
+        {
+    		return state.vertices.length == 1 && state.edges.length == 0;
+        }},
+        {name: 'collapsible', dispName: 'Collapsible', type: 'bool', getDefaultValue: function(state, format)
+        {
+        	var cell = (state.vertices.length == 1 && state.edges.length == 0) ? state.vertices[0] : null;
+        	var graph = format.editorUi.editor.graph;
+        	
+        	return cell != null && ((graph.isContainer(cell) && state.style['collapsible'] != '0') ||
+        		(!graph.isContainer(cell) && state.style['collapsible'] == '1'));
+        }, isVisible: function(state, format)
+        {
+    		return state.vertices.length == 1 && state.edges.length == 0;
+        }},
+        {name: 'recursiveResize', dispName: 'Resize Children', type: 'bool', defVal: true, isVisible: function(state, format)
+        {
+    		return state.vertices.length == 1 && state.edges.length == 0 &&
+    			!format.editorUi.editor.graph.isSwimlane(state.vertices[0]) &&
+    			mxUtils.getValue(state.style, 'childLayout', null) == null;
+        }},
+        {name: 'expand', dispName: 'Expand', type: 'bool', defVal: true},
+        {name: 'part', dispName: 'Part', type: 'bool', defVal: false, isVisible: function(state, format)
+        {
+        	var model = format.editorUi.editor.graph.model;
+        	
+        	return (state.vertices.length > 0) ? model.isVertex(model.getParent(state.vertices[0])) : false;
+        }},
         {name: 'editable', dispName: 'Editable', type: 'bool', defVal: true},
         {name: 'backgroundOutline', dispName: 'Background Outline', type: 'bool', defVal: false},
         {name: 'movable', dispName: 'Movable', type: 'bool', defVal: true},
+        {name: 'movableLabel', dispName: 'Movable Label', type: 'bool', defVal: false, isVisible: function(state, format)
+        {
+    		var geo = (state.vertices.length > 0) ? format.editorUi.editor.graph.getCellGeometry(state.vertices[0]) : null;
+    		
+    		return geo != null && !geo.relative;
+        }},
         {name: 'resizable', dispName: 'Resizable', type: 'bool', defVal: true},
         {name: 'resizeWidth', dispName: 'Resize Width', type: 'bool', defVal: false},
         {name: 'resizeHeight', dispName: 'Resize Height', type: 'bool', defVal: false},
         {name: 'rotatable', dispName: 'Rotatable', type: 'bool', defVal: true},
         {name: 'cloneable', dispName: 'Cloneable', type: 'bool', defVal: true},
-        {name: 'deletable', dispName: 'Deletable', type: 'bool', defVal: true}
+        {name: 'deletable', dispName: 'Deletable', type: 'bool', defVal: true},
+        {name: 'treeFolding', dispName: 'Tree Folding', type: 'bool', defVal: false},
+        {name: 'treeMoving', dispName: 'Tree Moving', type: 'bool', defVal: false},
+        {name: 'pointerEvents', dispName: 'Pointer Events', type: 'bool', defVal: true, isVisible: function(state, format)
+        {
+        	var fillColor = mxUtils.getValue(state.style, mxConstants.STYLE_FILLCOLOR, null);
+        	
+        	return format.editorUi.editor.graph.isSwimlane(state.vertices[0]) ||
+        		fillColor == null || fillColor == mxConstants.NONE;
+        }},
+        {name: 'moveCells', dispName: 'Move Cells on Fold', type: 'bool', defVal: false, isVisible: function(state, format)
+        {
+        	return state.vertices.length > 0 && format.editorUi.editor.graph.isContainer(state.vertices[0]);
+        }}
 	];
 	/**
 	 * Default value for the CSV import dialog.
@@ -226,6 +375,26 @@
 		'#\n' +
 		'# parentstyle: swimlane;whiteSpace=wrap;html=1;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;\n' +
 		'#\n' +
+		'## Optional column name that contains a reference to a named style in styles.\n' +
+		'## Default is the current style for nodes.\n' +
+		'#\n' +
+		'# stylename: -\n' +
+		'#\n' +
+		'## JSON for named styles of the form {"name": "style", "name": "style"} where style is a cell style with\n' +
+		'## placeholders that are replaced once.\n' +
+		'#\n' +
+		'# styles: -\n' +
+		'#\n' +
+		'## Optional column name that contains a reference to a named label in labels.\n' +
+		'## Default is the current label.\n' +
+		'#\n' +
+		'# labelname: -\n' +
+		'#\n' +
+		'## JSON for named labels of the form {"name": "label", "name": "label"} where label is a cell label with\n' +
+		'## placeholders.\n' +
+		'#\n' +
+		'# labels: -\n' +
+		'#\n' +
 		'## Uses the given column name as the identity for cells (updates existing cells).\n' +
 		'## Default is no identity (empty value or -).\n' +
 		'#\n' +
@@ -244,9 +413,14 @@
 		'#\n' +
 		'## Connections between rows ("from": source colum, "to": target column).\n' +
 		'## Label, style and invert are optional. Defaults are \'\', current style and false.\n' +
+		'## If placeholders are used in the style, they are replaced with data from the source.\n' +
+		'## An optional placeholders can be set to target to use data from the target instead.\n' +
 		'## In addition to label, an optional fromlabel and tolabel can be used to name the column\n' +
 		'## that contains the text for the label in the edges source or target (invert ignored).\n' +
 		'## The label is concatenated in the form fromlabel + label + tolabel if all are defined.\n' +
+		'## Additional labels can be added by using an optional labels array with entries of the\n' +
+		'## form {"label": string, "x": number, "y": number, "dx": number, "dy": number} where\n' +
+		'## x is from -1 to 1 along the edge, y is orthogonal, and dx/dy are offsets in pixels.\n' +
 		'## The target column may contain a comma-separated list of values.\n' +
 		'## Multiple connect entries are allowed.\n' +
 		'#\n' +
@@ -281,7 +455,7 @@
 		'## Comma-separated list of ignored columns for metadata. (These can be\n' +
 		'## used for connections and styles but will not be added as metadata.)\n' +
 		'#\n' +
-		'# ignore: id,image,fill,stroke\n' +
+		'# ignore: id,image,fill,stroke,refs,manager\n' +
 		'#\n' +
 		'## Column to be renamed to link attribute (used as link).\n' +
 		'#\n' +
@@ -313,24 +487,425 @@
 		'Tessa Valet,HR Director,tva,Office 4,Evan Miller,me@example.com,#d5e8d4,#82b366,,https://www.draw.io,https://cdn3.iconfinder.com/data/icons/user-avatars-1/512/users-3-128.png\n';
 
 	/**
-	 * Disables the shadow option in the format panel.
+	 * Compresses the given string.
 	 */
-	Editor.shadowOptionEnabled = true;
+	Editor.fastCompress = function(data)
+	{
+		if (data == null || data.length == 0 || typeof(pako) === 'undefined')
+		{
+			return data;
+		}
+		else
+		{
+			return pako.deflateRaw(data, {to: 'string'});
+		}
+	};
 
 	/**
-	 * Reference to the config object passed to <configure>.
+	 * Decompresses the given string.
 	 */
-	Editor.config = null;
+	Editor.fastDecompress = function(data)
+	{
+	   	if (data == null || data.length == 0 || typeof(pako) === 'undefined')
+		{
+			return data;
+		}
+		else
+		{
+			return pako.inflateRaw(data, {to: 'string'});
+		}
+	};
 
 	/**
-	 * Reference to the version of the last config object in
-	 * <configure>. If this is different to the last version in
-	 * mxSettings.parse, then the settings are reset.
+	 * Helper function to extract the graph model XML node.
 	 */
-	Editor.configVersion = null;
+	Editor.extractGraphModel = function(node, allowMxFile, checked)
+	{
+		if (node != null && typeof(pako) !== 'undefined')
+		{
+			var tmp = node.ownerDocument.getElementsByTagName('div');
+			var divs = [];
+			
+			if (tmp != null && tmp.length > 0)
+			{
+				for (var i = 0; i < tmp.length; i++)
+				{
+					if (tmp[i].getAttribute('class') == 'mxgraph')
+					{
+						divs.push(tmp[i]);
+						break;
+					}	
+				}
+			}
+			
+			if (divs.length > 0)
+			{
+				var data = divs[0].getAttribute('data-mxgraph');
 
-	Editor.prototype.timeout = 25000;
+				if (data != null)
+				{
+					var config = JSON.parse(data);
+
+					if (config != null && config.xml != null)
+					{
+						var doc2 = mxUtils.parseXml(config.xml);
+						node = doc2.documentElement;
+					}
+				}
+				else
+				{
+					var divs2 = divs[0].getElementsByTagName('div');
+					
+					if (divs2.length > 0)
+					{
+						var data = mxUtils.getTextContent(divs2[0]);
+		        		data = Graph.decompress(data, null, checked);
+		        		
+		        		if (data.length > 0)
+		        		{
+		        			var doc2 = mxUtils.parseXml(data);
+		        			node = doc2.documentElement;
+		        		}
+					}
+				}
+			}
+		}
+		
+		if (node != null && node.nodeName == 'svg')
+		{
+			var tmp = node.getAttribute('content');
+			
+			if (tmp != null && tmp.charAt(0) != '<' && tmp.charAt(0) != '%')
+			{
+				tmp = unescape((window.atob) ? atob(tmp) : Base64.decode(cont, tmp));
+			}
+			
+			if (tmp != null && tmp.charAt(0) == '%')
+			{
+				tmp = decodeURIComponent(tmp);
+			}
+			
+			if (tmp != null && tmp.length > 0)
+			{
+				node = mxUtils.parseXml(tmp).documentElement;
+			}
+			else
+			{
+				throw {message: mxResources.get('notADiagramFile')};
+			}
+		}
+		
+		if (node != null && !allowMxFile)
+		{
+			var diagramNode = null;
+			
+			if (node.nodeName == 'diagram')
+			{
+				diagramNode = node;
+			}
+			else if (node.nodeName == 'mxfile')
+			{
+				var diagrams = node.getElementsByTagName('diagram');
+
+				if (diagrams.length > 0)
+				{
+					diagramNode = diagrams[Math.max(0, Math.min(diagrams.length - 1, urlParams['page'] || 0))];
+				}
+			}
+			
+			if (diagramNode != null)
+			{
+				node = Editor.parseDiagramNode(diagramNode, checked);
+			}
+		}
+		
+		if (node != null && node.nodeName != 'mxGraphModel' && (!allowMxFile || node.nodeName != 'mxfile'))
+		{
+			node = null;
+		}
+		
+		return node;
+	};
 	
+	/**
+	 * Extracts the XML from the compressed or non-compressed text chunk.
+	 */
+	Editor.parseDiagramNode = function(diagramNode, checked)
+	{
+		var text = mxUtils.trim(mxUtils.getTextContent(diagramNode));
+		var node = null;
+		
+		if (text.length > 0)
+		{
+			var tmp = Graph.decompress(text, null, checked);
+			
+			if (tmp != null && tmp.length > 0)
+			{
+				node = mxUtils.parseXml(tmp).documentElement;
+			}
+		}
+		else
+		{
+			var temp = mxUtils.getChildNodes(diagramNode);
+			
+			if (temp.length > 0)
+			{
+				// Creates new document for unique IDs within mxGraphModel
+				var doc = mxUtils.createXmlDocument();
+				doc.appendChild(doc.importNode(temp[0], true));
+				node = doc.documentElement;
+			}
+		}
+		
+		return node;
+	};
+	
+	/**
+	 * Extracts the XML from the compressed or non-compressed text chunk.
+	 */
+	Editor.getDiagramNodeXml = function(diagramNode)
+	{
+		var text = mxUtils.getTextContent(diagramNode);
+		var xml = null;
+		
+		if (text.length > 0)
+		{
+			xml = Graph.decompress(text);
+		}
+		else if (diagramNode.firstChild != null)
+		{
+			xml = mxUtils.getXml(diagramNode.firstChild);
+		}
+		
+		return xml;
+	};
+
+	/**
+	 * Static method for parsing PDF files.
+	 */
+	Editor.extractGraphModelFromPdf = function(base64)
+	{
+		base64 = base64.substring(base64.indexOf(',') + 1);
+
+		// Workaround for invalid character error in Safari
+		var f = (window.atob && !mxClient.IS_SF) ? atob(base64) : Base64.decode(base64, true);
+		var check = '/Subject (%3Cmxfile';
+		var result = null;
+		var curline = '';
+		var checked = 0;
+		var pos = 0;
+		var obj = [];
+		var buf = null;
+		var nr = null;
+		
+		while (pos < f.length)
+		{
+			var b = f.charCodeAt(pos);
+			pos += 1;
+			
+			if (b != 10)
+			{
+				curline += String.fromCharCode(b);
+			}
+			
+			if (b == check.charCodeAt(checked))
+			{
+				checked++;
+			}
+			else
+			{
+				checked = 0;
+			}
+			
+			if (checked == check.length)
+			{
+				var end = f.indexOf('%3C%2Fmxfile%3E)', pos) + 15; //15 is the length of encoded </mxfile>
+				pos -= 9; //9 is the length of encoded <mxfile
+				
+				// Default case is XML inlined in Subject metadata
+				if (end > pos)
+				{
+					result = f.substring(pos, end);
+					
+					break;
+				}
+			}
+			
+			// Creates table for lookup if no inline data is found
+			if (b == 10)
+			{
+				if (curline == 'endobj')
+				{
+					buf = null;
+				}
+				else if (curline.substring(curline.length - 3, curline.length) == 'obj' ||
+					curline == 'xref' || curline == 'trailer')
+				{
+					buf = [];
+					obj[curline.split(' ')[0]] = buf;
+				}
+				else if (buf != null)
+				{
+					buf.push(curline);
+				}
+				
+				curline = '';
+			}
+		}
+		
+		// Extract XML via references
+		if (result == null)
+		{
+			result = Editor.extractGraphModelFromXref(obj);
+		}
+		
+		if (result != null)
+		{
+			result = decodeURIComponent(result.
+					replace(/\\\(/g, "(").
+					replace(/\\\)/g, ")"));
+		}
+		
+		return result;
+	};
+
+	/**
+	 * Static method for extracting Subject via references of the form
+	 * 
+	 * << /Size 33 /Root 20 0 R /Info 1 0 R and 1 0 obj << /Subject 22 0 R
+	 * 
+	 * Where Info is the metadata block and Subject is the data block.
+	 */
+	Editor.extractGraphModelFromXref = function(obj)
+	{
+		var trailer = obj['trailer'];
+		var result = null;
+
+		// Gets Info object
+		if (trailer != null)
+		{
+			var arr = /.* \/Info (\d+) (\d+) R/g.exec(trailer.join('\n'));
+			
+			if (arr != null && arr.length > 0)
+			{
+				var info = obj[arr[1]];
+				
+				if (info != null)
+				{
+					arr = /.* \/Subject (\d+) (\d+) R/g.exec(info.join('\n'));
+				
+					if (arr != null && arr.length > 0)
+					{
+						var subj = obj[arr[1]];
+						
+						if (subj != null)
+						{
+							subj = subj.join('\n');
+							result = subj.substring(1, subj.length - 1);
+						}
+					}
+				}
+			}
+		}
+		
+		return result;
+	};
+	
+	/**
+	 * Extracts the XML from the compressed or non-compressed text chunk.
+	 */
+	Editor.extractGraphModelFromPng = function(data)
+	{
+		var result = null;
+		
+		try
+		{
+			var base64 = data.substring(data.indexOf(',') + 1);
+
+			// Workaround for invalid character error in Safari
+			var binary = (window.atob && !mxClient.IS_SF) ? atob(base64) : Base64.decode(base64, true);
+			
+			EditorUi.parsePng(binary, mxUtils.bind(this, function(pos, type, length)
+			{
+				var value = binary.substring(pos + 8, pos + 8 + length);
+				
+				if (type == 'zTXt')
+				{
+					var idx = value.indexOf(String.fromCharCode(0));
+					
+					if (value.substring(0, idx) == 'mxGraphModel')
+					{
+						// Workaround for Java URL Encoder using + for spaces, which isn't compatible with JS
+						var xmlData = pako.inflateRaw(value.substring(idx + 2),
+							{to: 'string'}).replace(/\+/g,' ');
+						
+						if (xmlData != null && xmlData.length > 0)
+						{
+							result = xmlData;
+						}
+					}
+				}
+				// Uncompressed section is normally not used
+				else if (type == 'tEXt')
+				{
+					var vals = value.split(String.fromCharCode(0));
+					
+					if (vals.length > 1 && (vals[0] == 'mxGraphModel' ||
+						vals[0] == 'mxfile'))
+					{
+						result = vals[1];
+					}
+				}
+				
+				if (result != null || type == 'IDAT')
+				{
+					// Stops processing the file as our text chunks
+					// are always placed before the data section
+					return true;
+				}
+			}));
+		}
+		catch (e)
+		{
+			// ignores decoding errors
+		}
+		
+		if (result != null && result.charAt(0) == '%')
+		{
+			result = decodeURIComponent(result);
+		}
+		
+		// Workaround for double encoded content
+		if (result != null && result.charAt(0) == '%')
+		{
+			result = decodeURIComponent(result);
+		}
+		
+		return result;
+	};
+
+	/**
+	 * Extracts any parsers errors in the given XML.
+	 */
+	Editor.extractParserError = function(node, defaultCause)
+	{
+		var cause = null;
+		var errors = (node != null) ? node.getElementsByTagName('parsererror') : null;
+		
+		if (errors != null && errors.length > 0)
+		{
+			cause = defaultCause || mxResources.get('invalidChars');
+			var divs = errors[0].getElementsByTagName('div');
+			
+			if (divs.length > 0)
+			{
+				cause = mxUtils.getTextContent(divs[0]);
+			}
+		}
+		
+		return (cause != null) ? mxUtils.trim(cause) : cause;
+	};
+
 	/**
 	 * Global configuration of the Editor
 	 * see https://desk.draw.io/solution/articles/16000058316
@@ -354,6 +929,16 @@
 			if (config.templateFile != null)
 			{
 				EditorUi.templateFile = config.templateFile;
+			}
+			
+			if (config.globalVars != null)
+			{
+				Editor.globalVars = config.globalVars;
+			}
+
+			if (config.compressXml != null)
+			{
+				Editor.compressXml = config.compressXml;
 			}
 			
 			if (config.customFonts)
@@ -454,14 +1039,21 @@
 			
 			if (config.fontCss)
 			{
-				var s = document.createElement('style');
-				s.setAttribute('type', 'text/css');
-				s.appendChild(document.createTextNode(config.fontCss));
+				Editor.configureFontCss(config.fontCss);
+			}
+			
+			if (config.autosaveDelay != null)
+			{
+				var val = parseInt(config.autosaveDelay);
 				
-				var t = document.getElementsByTagName('script')[0];
-			  	t.parentNode.insertBefore(s, t);
-			  	
-			  	Editor.prototype.fontCss = config.fontCss;
+				if (!isNaN(val) && val > 0)
+				{
+					DrawioFile.prototype.autosaveDelay = val;
+				}
+				else
+				{
+					EditorUi.debug('Invalid autosaveDelay: ' + config.autosaveDelay);
+				}
 			}
 			
 			if (config.plugins != null && !untrusted)
@@ -478,17 +1070,64 @@
 	};
 
 	/**
-	 * Generates a unique ID of the given length
+	 * Adds the global fontCss configuration.
+	 */
+	Editor.configureFontCss = function(fontCss)
+	{
+		if (fontCss != null)
+		{
+			Editor.prototype.fontCss = fontCss;
+			var t = document.getElementsByTagName('script')[0];
+			
+			if (t != null && t.parentNode != null)
+			{
+				var s = document.createElement('style');
+				s.setAttribute('type', 'text/css');
+				s.appendChild(document.createTextNode(fontCss));
+				t.parentNode.insertBefore(s, t);
+				
+				// Preloads fonts where supported
+				var parts = fontCss.split('url(');
+				
+				for (var i = 1; i < parts.length; i++)
+				{
+				    var idx = parts[i].indexOf(')');
+				    var url = Editor.trimCssUrl(parts[i].substring(0, idx));
+				    
+				    var l = document.createElement('link');
+					l.setAttribute('rel', 'preload');
+					l.setAttribute('href', url);
+					l.setAttribute('as', 'font');
+					l.setAttribute('crossorigin', '');
+					
+				  	t.parentNode.insertBefore(l, t);
+				}
+			}
+		}
+	};
+			
+	/**
+	 * Strips leading and trailing quotes and spaces
+	 */
+    Editor.trimCssUrl = function(str)
+    {
+    	return str.replace(new RegExp("^[\\s\"']+", "g"), "").replace(new RegExp("[\\s\"']+$", "g"), "");
+    }
+    
+	Editor.GOOGLE_FONTS =  'https://fonts.googleapis.com/css?family=';
+	
+	/**
+	 * Alphabet for global unique IDs.
 	 */
 	Editor.GUID_ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_';
 
 	/**
-	 * Generates a unique ID of the given length
+	 * Default length for global unique IDs.
 	 */
 	Editor.GUID_LENGTH = 20;
 	
 	/**
-	 * Generates a unique ID of the given length
+	 * Default length for global unique IDs.
 	 */
 	Editor.guid = function(length)
 	{
@@ -502,17 +1141,27 @@
 
 		return rtn.join('');
 	};
+
+	/**
+	 * General timeout is 25 seconds.
+	 */
+	Editor.prototype.timeout = 25000;
 	
 	/**
-	 * This should not be enabled if reflows are required for math rendering.
+	 * Zoomed mathjax output is causing problems in Safari.
 	 */
-	Editor.prototype.useForeignObjectForMath = false;
+	Editor.prototype.useForeignObjectForMath = !mxClient.IS_SF;
 
 	/**
 	 * Executes the first step for connecting to Google Drive.
 	 */
 	Editor.prototype.editButtonLink = (urlParams['edit'] != null) ? decodeURIComponent(urlParams['edit']) : null;
 
+	/**
+	 * Specifies if img.crossOrigin is supported. This is true for all browsers except IE10 and earlier.
+	 */
+	Editor.prototype.crossOriginImages = !mxClient.IS_IE;
+	
 	/**
 	 * Adds support for old stylesheets and compressed files
 	 */
@@ -592,6 +1241,29 @@
 				this.graph.updateCssTransform();
 
 				this.graph.setShadowVisible(node.getAttribute('shadow') == '1', false);
+				
+				var extFonts = node.getAttribute('extFonts');
+				
+				if (extFonts)
+				{
+					try
+					{
+						extFonts = extFonts.split('|').map(function(ef)
+						{
+							var parts = ef.split('^');
+							return {name: parts[0], url: parts[1]};
+						});
+						
+						for (var i = 0; i < extFonts.length; i++)
+						{
+							this.graph.addExtFont(extFonts[i].name, extFonts[i].url);
+						}
+					}
+					catch(e)
+					{
+						console.log('ExtFonts format error: ' + e.message);
+					}
+				}
 			}
 	
 			// Calls updateGraphComponents
@@ -629,6 +1301,16 @@
 		
 		node.setAttribute('math', (this.graph.mathEnabled) ? '1' : '0');
 		node.setAttribute('shadow', (this.graph.shadowVisible) ? '1' : '0');
+		
+		if (this.graph.extFonts != null && this.graph.extFonts.length > 0)
+		{
+			var strExtFonts = this.graph.extFonts.map(function(ef)
+			{
+				return ef.name + '^' + ef.url;
+			});
+			
+			node.setAttribute('extFonts', strExtFonts.join('|'));
+		}
 		
 		return node;
 	};
@@ -675,117 +1357,9 @@
 	/**
 	 * Helper function to extract the graph model XML node.
 	 */
-	Editor.prototype.extractGraphModel = function(node, allowMxFile)
+	Editor.prototype.extractGraphModel = function(node, allowMxFile, checked)
 	{
-		if (node != null && typeof(pako) !== 'undefined')
-		{
-			var tmp = node.ownerDocument.getElementsByTagName('div');
-			var divs = [];
-			
-			if (tmp != null && tmp.length > 0)
-			{
-				for (var i = 0; i < tmp.length; i++)
-				{
-					if (tmp[i].getAttribute('class') == 'mxgraph')
-					{
-						divs.push(tmp[i]);
-						break;
-					}	
-				}
-			}
-			
-			if (divs.length > 0)
-			{
-				var data = divs[0].getAttribute('data-mxgraph');
-
-				if (data != null)
-				{
-					var config = JSON.parse(data);
-
-					if (config != null && config.xml != null)
-					{
-						var doc2 = mxUtils.parseXml(config.xml);
-						node = doc2.documentElement;
-					}
-				}
-				else
-				{
-					var divs2 = divs[0].getElementsByTagName('div');
-					
-					if (divs2.length > 0)
-					{
-						var data = mxUtils.getTextContent(divs2[0]);
-		        		data = Graph.decompress(data);
-		        		
-		        		if (data.length > 0)
-		        		{
-		        			var doc2 = mxUtils.parseXml(data);
-		        			node = doc2.documentElement;
-		        		}
-					}
-				}
-			}
-		}
-		
-		if (node != null && node.nodeName == 'svg')
-		{
-			var tmp = node.getAttribute('content');
-			
-			if (tmp != null && tmp.charAt(0) != '<' && tmp.charAt(0) != '%')
-			{
-				tmp = unescape((window.atob) ? atob(tmp) : Base64.decode(cont, tmp));
-			}
-			
-			if (tmp != null && tmp.charAt(0) == '%')
-			{
-				tmp = decodeURIComponent(tmp);
-			}
-			
-			if (tmp != null && tmp.length > 0)
-			{
-				node = mxUtils.parseXml(tmp).documentElement;
-			}
-			else
-			{
-				throw {message: mxResources.get('notADiagramFile')};
-			}
-		}
-		
-		if (node != null && !allowMxFile)
-		{
-			var diagramNode = null;
-			
-			if (node.nodeName == 'diagram')
-			{
-				diagramNode = node;
-			}
-			else if (node.nodeName == 'mxfile')
-			{
-				var diagrams = node.getElementsByTagName('diagram');
-
-				if (diagrams.length > 0)
-				{
-					diagramNode = diagrams[Math.max(0, Math.min(diagrams.length - 1, urlParams['page'] || 0))];
-				}
-			}
-			
-			if (diagramNode != null)
-			{
-				var tmp = Graph.decompress(mxUtils.getTextContent(diagramNode));
-				
-				if (tmp != null && tmp.length > 0)
-				{
-					node = mxUtils.parseXml(tmp).documentElement;
-				}
-			}
-		}
-		
-		if (node != null && node.nodeName != 'mxGraphModel' && (!allowMxFile || node.nodeName != 'mxfile'))
-		{
-			node = null;
-		}
-		
-		return node;
+		return Editor.extractGraphModel.apply(this, arguments);
 	};
 	
 	/**
@@ -829,7 +1403,7 @@
 	 */
 	Editor.initMath = function(src, config)
 	{
-		src = (src != null) ? src : DRAW_MATH_URL + '/MathJax.js?config=TeX-MML-AM_HTMLorMML';
+		src = (src != null) ? src : DRAW_MATH_URL + '/MathJax.js';
 		Editor.mathJaxQueue = [];
 		
 		Editor.doMathJaxRender = function(container)
@@ -842,6 +1416,37 @@
 				}
 			}, 0);
 		};
+		
+		var font = (urlParams['math-font'] != null) ?
+			decodeURIComponent(urlParams['math-font']) :
+			'TeX';
+		
+		config = (config != null) ? config :
+		{
+			jax: ['input/TeX', 'input/MathML', 'input/AsciiMath'].concat(
+				[(urlParams['math-output'] == 'html') ?
+					'output/HTML-CSS' : 'output/SVG']),
+			extensions: ['tex2jax.js', 'mml2jax.js', 'asciimath2jax.js'],
+			TeX: {
+				extensions: ['AMSmath.js', 'AMSsymbols.js', 'noErrors.js', 'noUndefined.js']
+			},
+			'HTML-CSS': {
+				availableFonts: [font],
+				imageFont: null
+			},
+			SVG: {
+				font: font,
+				// Needed for client-side export to work
+				useFontCache: false
+			},
+			// Ignores math in in-place editor
+			tex2jax: {
+				ignoreClass: 'mxCellEditor'
+		  	},
+		  	asciimath2jax: {
+				ignoreClass: 'mxCellEditor'
+		  	}
+		};
 
 		// Disables global typesetting and messages on startup, adds queue for
 		// asynchronous rendering while MathJax is loading
@@ -852,31 +1457,14 @@
 			messageStyle: 'none',
 			AuthorInit: function ()
 			{
-				// Specification recommends using SVG over HTML-CSS if browser is known
-				// Check if too inconsistent with image export and print output
-				MathJax.Hub.Config(config || {
-					jax: ['input/TeX', 'input/MathML', 'input/AsciiMath', 'output/HTML-CSS'],
-					extensions: ['tex2jax.js', 'mml2jax.js', 'asciimath2jax.js'],
-					'HTML-CSS': {
-						imageFont: null
-					},
-					TeX: {
-					  extensions: ['AMSmath.js', 'AMSsymbols.js', 'noErrors.js', 'noUndefined.js']
-					},
-					// Ignores math in in-place editor
-					tex2jax: {
-						ignoreClass: 'mxCellEditor'
-				  	},
-				  	asciimath2jax: {
-						ignoreClass: 'mxCellEditor'
-				  	}
-				});
-				MathJax.Hub.Register.StartupHook('Begin', function()
-				{
-					for (var i = 0; i < Editor.mathJaxQueue.length; i++)
-					{
-						Editor.doMathJaxRender(Editor.mathJaxQueue[i]);
-					}
+				MathJax.Hub.Config(config);
+				
+				MathJax.Hub.Register.StartupHook('Begin', function()	
+				{	
+					for (var i = 0; i < Editor.mathJaxQueue.length; i++)	
+					{	
+						Editor.doMathJaxRender(Editor.mathJaxQueue[i]);	
+					}	
 				});
 		    }
 		};
@@ -953,26 +1541,30 @@
 	};
 
 	/**
-	 * Returns true if the given URL is known to have CORS headers.
+	 * Returns true if the given URL is known to have CORS headers and is
+	 * allowed by CSP.
 	 */
 	Editor.prototype.isCorsEnabledForUrl = function(url)
 	{
+		// Disables proxy for desktop and chrome app as it is served locally
+		if (mxClient.IS_CHROMEAPP || EditorUi.isElectronApp)
+		{
+			return true;
+		}
+		
+		// Blocked by CSP in production but allowed for hosted deployment
 		if (urlParams['cors'] != null && this.corsRegExp == null)
 		{
 			this.corsRegExp = new RegExp(decodeURIComponent(urlParams['cors']));
 		}
 		
+		// No access-control-allow-origin for some Iconfinder images, add this when fixed:
+		// /^https?:\/\/[^\/]*\.iconfinder.com\//.test(url) ||
 		return (this.corsRegExp != null && this.corsRegExp.test(url)) ||
-			url.substring(0, 34) === 'https://raw.githubusercontent.com/' ||
-			url.substring(0, 23) === 'https://cdn.rawgit.com/' ||
-			url.substring(0, 19) === 'https://rawgit.com/' ||
-			/^https?:\/\/[^\/]*\.blob.core.windows.net\//.test(url) ||
-			/^https?:\/\/[^\/]*\.iconfinder.com\//.test(url) ||
-			/^https?:\/\/[^\/]*\.draw\.io\/proxy/.test(url) ||
-			/^https?:\/\/[^\/]*\.github\.io\//.test(url);
+			url.substring(0, 34) === 'https://raw.githubusercontent.com/';
 	};
-
-	//TODO This function is a replica of EditorUi one, it is planned to replace all calls to EditorUi one to point to this one
+	
+	
 	/**
 	 * Converts all images in the SVG output to data URIs for immediate rendering
 	 */
@@ -993,14 +1585,14 @@
 				
 				if (remote && !navigator.onLine)
 				{
-					src = EditorUi.prototype.svgBrokenImage.src; //TODO move it to Editor?
+					src = Editor.svgBrokenImage.src;
 				}
 				else if (remote && src.substring(0, converter.baseUrl.length) != converter.baseUrl &&
-						(!EditorUi.prototype.crossOriginImages || !self.isCorsEnabledForUrl(src))) //TODO move it to Editor?
+						(!self.crossOriginImages || !self.isCorsEnabledForUrl(src)))
 				{
 					src = PROXY_URL + '?url=' + encodeURIComponent(src);
 				}
-				else if (src.substring(0, 19) != 'chrome-extension://')
+				else if (src.substring(0, 19) != 'chrome-extension://' && !mxClient.IS_CHROMEAPP)
 				{
 					src = convert.apply(this, arguments);
 				}
@@ -1012,70 +1604,102 @@
 		return converter;
 	};
 
-	//TODO This function is a replica of EditorUi one, it is planned to replace all calls to EditorUi one to point to this one
 	/**
 	 * 
 	 */
-	Editor.prototype.createSvgDataUri = function(svg)
+	Editor.createSvgDataUri = function(svg)
 	{
 		return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
 	};
 
-	//TODO This function is a replica of EditorUi one, it is planned to replace all calls to EditorUi one to point to this one
 	/**
 	 * 
 	 */
 	Editor.prototype.convertImageToDataUri = function(url, callback)
 	{
-		if (/(\.svg)$/i.test(url))
+		try
 		{
-			mxUtils.get(url, mxUtils.bind(this, function(req)
+			var acceptResponse = true;
+			
+			var timeoutThread = window.setTimeout(mxUtils.bind(this, function()
 			{
-				callback(this.createSvgDataUri(req.getText()));
-			}),
-			function()
+				acceptResponse = false;
+				callback(Editor.svgBrokenImage.src);
+			}), this.timeout);
+	
+			if (/(\.svg)$/i.test(url))
 			{
-				callback(EditorUi.prototype.svgBrokenImage.src);
-			});
+				mxUtils.get(url, mxUtils.bind(this, function(req)
+				{
+			    	window.clearTimeout(timeoutThread);
+					
+					if (acceptResponse)
+					{
+						callback(Editor.createSvgDataUri(req.getText()));
+					}
+				}),
+				function()
+				{
+			    	window.clearTimeout(timeoutThread);
+					
+					if (acceptResponse)
+					{
+						callback(Editor.svgBrokenImage.src);
+					}
+				});
+			}
+			else
+			{
+			    var img = new Image();
+			    
+			    if (this.crossOriginImages)
+		    	{
+				    img.crossOrigin = 'anonymous';
+			    }
+			    
+			    img.onload = function()
+			    {
+			    	window.clearTimeout(timeoutThread);
+					
+					if (acceptResponse)
+					{
+				        try
+				        {
+					        var canvas = document.createElement('canvas');
+					        var ctx = canvas.getContext('2d');
+					        canvas.height = img.height;
+					        canvas.width = img.width;
+					        ctx.drawImage(img, 0, 0);
+
+				        	callback(canvas.toDataURL());
+				        }
+				        catch (e)
+				        {
+			        		callback(Editor.svgBrokenImage.src);
+				        }
+					}
+			    };
+			    
+			    img.onerror = function()
+			    {
+			    	window.clearTimeout(timeoutThread);
+					
+					if (acceptResponse)
+					{
+						callback(Editor.svgBrokenImage.src);
+					}
+			    };
+			    
+			    img.src = url;
+			}
 		}
-		else
+		catch (e)
 		{
-		    var img = new Image();
-		    var self = this;
-		    
-		    if (EditorUi.prototype.crossOriginImages)
-	    	{
-			    img.crossOrigin = 'anonymous';
-		    }
-		    
-		    img.onload = function()
-		    {
-		        var canvas = document.createElement('canvas');
-		        var ctx = canvas.getContext('2d');
-		        canvas.height = img.height;
-		        canvas.width = img.width;
-		        ctx.drawImage(img, 0, 0);
-		        
-		        try
-		        {
-	        		callback(canvas.toDataURL());
-		        }
-		        catch (e)
-		        {
-	        		callback(EditorUi.prototype.svgBrokenImage.src);
-		        }
-		    };
-		    
-		    img.onerror = function()
-		    {
-	    		callback(EditorUi.prototype.svgBrokenImage.src);
-		    };
-		    
-		    img.src = url;
+			callback(Editor.svgBrokenImage.src);
 		}
 	};
-
-	//TODO This function is a replica of EditorUi one, it is planned to replace all calls to EditorUi one to point to this one
+	
+	
 	/**
 	 * Converts all images in the SVG output to data URIs for immediate rendering
 	 */
@@ -1115,36 +1739,46 @@
 			{
 				(mxUtils.bind(this, function(img)
 				{
-					var src = converter.convert(img.getAttribute(srcAttr));
-		        	
-					// Data URIs are pass-through
-					if (src != null && src.substring(0, 5) != 'data:')
+					try
 					{
-						var tmp = cache[src];
-						
-						if (tmp == null)
+						if (img != null)
 						{
-							inc();
-							
-							this.convertImageToDataUri(src, function(uri)
+							var src = converter.convert(img.getAttribute(srcAttr));
+				        	
+							// Data URIs are pass-through
+							if (src != null && src.substring(0, 5) != 'data:')
 							{
-								if (uri != null)
-								{
-									cache[src] = uri;
-									img.setAttribute(srcAttr, uri);
-								}
+								var tmp = cache[src];
 								
-								dec();
-							});
-						}
-						else
-						{
-							img.setAttribute(srcAttr, tmp);
+								if (tmp == null)
+								{
+									inc();
+									
+									this.convertImageToDataUri(src, function(uri)
+									{
+										if (uri != null)
+										{
+											cache[src] = uri;
+											img.setAttribute(srcAttr, uri);
+										}
+										
+										dec();
+									});
+								}
+								else
+								{
+									img.setAttribute(srcAttr, tmp);
+								}
+							}
+							else if (src != null)
+							{
+								img.setAttribute(srcAttr, src);
+							}
 						}
 					}
-					else if (src != null)
+					catch (e)
 					{
-						img.setAttribute(srcAttr, src);
+						// ignore
 					}
 				}))(images[i]);
 			}
@@ -1162,12 +1796,11 @@
 		}
 	};
 
-	//TODO This function is a replica of EditorUi one, it is planned to replace all calls to EditorUi one to point to this one
 	/**
 	 * Base64 encodes the given string. This method seems to be more
 	 * robust for encoding PNG from binary AJAX responses.
 	 */
-	Editor.prototype.base64Encode = function(str)
+	Editor.base64Encode = function(str)
 	{
 	    var CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	    var out = "", i = 0, len = str.length, c1, c2, c3;
@@ -1205,16 +1838,16 @@
 	    return out;
 	};
 
-	//TODO This function is a replica of EditorUi one, it is planned to replace all calls to EditorUi one to point to this one
 	/**
 	 * Checks if the client is authorized and calls the next step.
 	 */
-	Editor.prototype.loadUrl = function(url, success, error, forceBinary, retry, dataUriPrefix)
+	Editor.prototype.loadUrl = function(url, success, error, forceBinary, retry, dataUriPrefix, noBinary, headers)
 	{
 		try
 		{
-			var binary = forceBinary || /(\.png)($|\?)/i.test(url) ||
-				/(\.jpe?g)($|\?)/i.test(url) || /(\.gif)($|\?)/i.test(url);
+			var binary = !noBinary && (forceBinary || /(\.png)($|\?)/i.test(url) ||
+				/(\.jpe?g)($|\?)/i.test(url) || /(\.gif)($|\?)/i.test(url) ||
+				/(\.pdf)($|\?)/i.test(url));
 			retry = (retry != null) ? retry : true;
 			
 			var fn = mxUtils.bind(this, function()
@@ -1248,21 +1881,29 @@
 								// LATER: Could be JPG but modern browsers
 								// ignore the mime type in the data URI
 								dataUriPrefix = (dataUriPrefix != null) ? dataUriPrefix : 'data:image/png;base64,';
-								data = dataUriPrefix + this.base64Encode(data);
+								data = dataUriPrefix + Editor.base64Encode(data);
 							}
-				    		
+							
 				    		success(data);
 				    	}
 					}
 					else if (error != null)
 			    	{
-			    		error({code: App.ERROR_UNKNOWN}, req);
+						if (req.getStatus() == 0)
+						{
+							// Handles CORS errors
+							error({message: mxResources.get('accessDenied')}, req);
+						}
+						else
+						{
+							error({message: mxResources.get('error') + ' ' + req.getStatus()}, req);
+						}
 			    	}
-				}), function()
+				}), function(req)
 				{
 			    	if (error != null)
 			    	{
-			    		error({code: App.ERROR_UNKNOWN});
+			    		error({message: mxResources.get('error') + ' ' + req.getStatus()});
 			    	}
 				}, binary, this.timeout, function()
 			    {
@@ -1270,7 +1911,7 @@
 					{
 						error({code: App.ERROR_TIMEOUT, retry: fn});
 					}
-			    });
+			    }, headers);
 			});
 			
 			fn();
@@ -1284,7 +1925,187 @@
 		}
 	};
 
-	//TODO This function is a replica of EditorUi one, it is planned to replace all calls to EditorUi one to point to this one
+	/**
+	 * Makes all relative font URLs absolute in the given font CSS.
+	 */
+    Editor.prototype.absoluteCssFonts = function(fontCss)
+    {
+    	var result = null;
+    	
+    	if (fontCss != null)
+    	{
+    		var parts = fontCss.split('url(');
+    		
+    		if (parts.length > 0)
+    		{
+    			result = [parts[0]];
+    		
+    			// Gets path for URL
+    			var path = window.location.pathname;
+    			var idx = (path != null) ? path.lastIndexOf('/') : -1;
+    			
+    			if (idx >= 0)
+    			{
+    				path = path.substring(0, idx + 1);
+    			}
+    			
+    			// Gets base tag from head
+    			var temp = document.getElementsByTagName('base');
+    			var base = null;
+    			
+    			if (temp != null && temp.length > 0)
+    			{
+    				base = temp[0].getAttribute('href');
+    			}
+    		
+    			for (var i = 1; i < parts.length; i++)
+    			{
+    				var idx = parts[i].indexOf(')');
+    				
+    				if (idx > 0)
+    				{
+	    				var url = Editor.trimCssUrl(parts[i].substring(0, idx));
+	    				
+	    				if (this.graph.isRelativeUrl(url))
+	    				{
+	                        url = (base != null) ? base + url : (window.location.protocol + '//' + window.location.hostname +
+	                        	((url.charAt(0) == '/') ? '' : path) + url);
+	                    }
+	    				
+	    				result.push('url("' + url + '"' + parts[i].substring(idx));
+    				}
+    				else
+    				{
+    					result.push(parts[i]);
+    				}
+    			}
+    		}
+    		else
+    		{
+    			result = [fontCss]
+    		}
+    	}
+    	
+    	return (result != null) ? result.join('') : null;
+	};
+	
+	/**
+	 * For the fonts in CSS to be applied when rendering images on canvas, the actual
+	 * font data must be made available via a data URI encoding of the file.
+	 */
+    Editor.prototype.embedCssFonts = function(fontCss, then)
+    {
+        var parts = fontCss.split('url(');
+        var waiting = 0;
+        
+        if (this.cachedFonts == null) 
+        {
+        	this.cachedFonts = {};
+        }
+
+        var finish = mxUtils.bind(this, function()
+        {
+            if (waiting == 0)
+            {
+                // Constructs string
+                var result = [parts[0]];
+                
+                for (var j = 1; j < parts.length; j++)
+                {
+                    var idx = parts[j].indexOf(')');
+                    result.push('url("');
+                    result.push(this.cachedFonts[Editor.trimCssUrl(parts[j].substring(0, idx))]);
+                    result.push('"' + parts[j].substring(idx));
+                }
+                
+                then(result.join(''));
+            }
+        });
+        
+        if (parts.length > 0)
+        {
+            for (var i = 1; i < parts.length; i++)
+            {
+                var idx = parts[i].indexOf(')');
+                var format = null;
+                
+                // Checks if there is a format directive
+                var fmtIdx = parts[i].indexOf('format(', idx);
+                
+                if (fmtIdx > 0)
+                {
+                    format = Editor.trimCssUrl(parts[i].substring(fmtIdx + 7, parts[i].indexOf(')', fmtIdx)));
+                }
+
+                (mxUtils.bind(this, function(url)
+                {
+                    if (this.cachedFonts[url] == null)
+                    {
+                        // Mark font as being fetched and fetch it
+                    	this.cachedFonts[url] = url;
+                        waiting++;
+                        
+                        var mime = 'application/x-font-ttf';
+                        
+                        // See https://stackoverflow.com/questions/2871655/proper-mime-type-for-fonts
+                        if (format == 'svg' || /(\.svg)($|\?)/i.test(url))
+                        {
+                            mime = 'image/svg+xml';
+                        }
+                        else if (format == 'otf' || format == 'embedded-opentype' || /(\.otf)($|\?)/i.test(url))
+                        {
+                            mime = 'application/x-font-opentype';
+                        }
+                        else if (format == 'woff' || /(\.woff)($|\?)/i.test(url))
+                        {
+                            mime = 'application/font-woff';
+                        }
+                        else if (format == 'woff2' || /(\.woff2)($|\?)/i.test(url))
+                        {
+                            mime = 'application/font-woff2';
+                        }
+                        else if (format == 'eot' || /(\.eot)($|\?)/i.test(url))
+                        {
+                            mime = 'application/vnd.ms-fontobject';
+                        }
+                        else if (format == 'sfnt' || /(\.sfnt)($|\?)/i.test(url))
+                        {
+                            mime = 'application/font-sfnt';
+                        }
+                        
+                        var realUrl = url;
+                        
+                        if ((/^https?:\/\//.test(realUrl)) && !this.isCorsEnabledForUrl(realUrl))
+                        {
+                            realUrl = PROXY_URL + '?url=' + encodeURIComponent(url);
+                        }
+
+                        // LATER: Remove cache-control header
+                        this.loadUrl(realUrl, mxUtils.bind(this, function(uri)
+                        {
+                        	this.cachedFonts[url] = uri;
+                            waiting--;
+                            finish();
+                        }), mxUtils.bind(this, function(err)
+                        {
+                            // LATER: handle error
+                            waiting--;
+                            finish();
+                        }), true, null, 'data:' + mime + ';charset=utf-8;base64,');
+                    }
+                }))(Editor.trimCssUrl(parts[i].substring(0, idx)), format);
+            }
+            
+            //In case all fonts are cached
+            finish();
+        }
+        else
+    	{
+        	//No font urls found
+        	then(fontCss);
+    	}
+    };
+	
 	/**
 	 * For the fontCSS to be applied when rendering images on canvas, the actual
 	 * font data must be made available via a data URI encoding of the file.
@@ -1293,305 +2114,445 @@
     {
         if (this.fontCss != null && this.resolvedFontCss == null)
         {
-            var parts = this.fontCss.split('url(');
-            var waiting = 0;
-            var fonts = {};
-
-            // Strips leading and trailing quotes and spaces
-            function trimString(str)
-            {
-                return str.replace(new RegExp("^[\\s\"']+", "g"), "").replace(new RegExp("[\\s\"']+$", "g"), "");
-            };
-            
-            var finish = mxUtils.bind(this, function()
-            {
-                if (waiting == 0)
-                {
-                    // Constructs string
-                    var result = [parts[0]];
-                    
-                    for (var j = 1; j < parts.length; j++)
-                    {
-                        var idx = parts[j].indexOf(')');
-                        result.push('url("');
-                        result.push(fonts[trimString(parts[j].substring(0, idx))]);
-                        result.push('"' + parts[j].substring(idx));
-                    }
-                    
-                    this.resolvedFontCss = result.join('');
-                    then();
-                }
-            });
-            
-            if (parts.length > 0)
-            {
-                for (var i = 1; i < parts.length; i++)
-                {
-                    var idx = parts[i].indexOf(')');
-                    var format = null;
-                    
-                    // Checks if there is a format directive
-                    var fmtIdx = parts[i].indexOf('format(', idx);
-                    
-                    if (fmtIdx > 0)
-                    {
-                        format = trimString(parts[i].substring(fmtIdx + 7, parts[i].indexOf(')', fmtIdx)));
-                    }
-    
-                    (mxUtils.bind(this, function(url)
-                    {
-                        if (fonts[url] == null)
-                        {
-                            // Mark font es being fetched and fetch it
-                            fonts[url] = url;
-                            waiting++;
-                            
-                            var mime = 'application/x-font-ttf';
-                            
-                            // See https://stackoverflow.com/questions/2871655/proper-mime-type-for-fonts
-                            if (format == 'svg' || /(\.svg)($|\?)/i.test(url))
-                            {
-                                mime = 'image/svg+xml';
-                            }
-                            else if (format == 'otf' || format == 'embedded-opentype' || /(\.otf)($|\?)/i.test(url))
-                            {
-                                mime = 'application/x-font-opentype';
-                            }
-                            else if (format == 'woff' || /(\.woff)($|\?)/i.test(url))
-                            {
-                                mime = 'application/font-woff';
-                            }
-                            else if (format == 'woff2' || /(\.woff2)($|\?)/i.test(url))
-                            {
-                                mime = 'application/font-woff2';
-                            }
-                            else if (format == 'eot' || /(\.eot)($|\?)/i.test(url))
-                            {
-                                mime = 'application/vnd.ms-fontobject';
-                            }
-                            else if (format == 'sfnt' || /(\.sfnt)($|\?)/i.test(url))
-                            {
-                                mime = 'application/font-sfnt';
-                            }
-                            
-                            var realUrl = url;
-                            
-                            if ((/^https?:\/\//.test(realUrl)) && !this.isCorsEnabledForUrl(realUrl))
-                            {
-                                realUrl = PROXY_URL + '?url=' + encodeURIComponent(url);
-                            }
-
-                            // LATER: Remove cache-control header
-                            this.loadUrl(realUrl, mxUtils.bind(this, function(uri)
-                            {
-                                fonts[url] = uri;
-                                waiting--;
-                                finish();
-                            }), mxUtils.bind(this, function(err)
-                            {
-                                // LATER: handle error
-                                waiting--;
-                                finish();
-                            }), true, null, 'data:' + mime + ';charset=utf-8;base64,');
-                        }
-                    }))(trimString(parts[i].substring(0, idx)), format);
-                }
-            }
+        	this.embedCssFonts(this.fontCss, mxUtils.bind(this, function(resolvedFontCss)
+			{
+        		this.resolvedFontCss = resolvedFontCss;
+        		then();
+			}));
         }
         else
         {
             then();
         }
     };
-
-	//TODO This function is a replica of EditorUi one, it is planned to replace all calls to EditorUi one to point to this one
-	/**
-	 * Converts math in the given SVG
-	 */
-	Editor.prototype.convertMath = function(graph, svgRoot, fixPosition, callback)
-	{
-		if (graph.mathEnabled && typeof(MathJax) !== 'undefined' && typeof(MathJax.Hub) !== 'undefined')
+    
+    /**
+     * Embeds external fonts
+     */
+    Editor.prototype.embedExtFonts = function(callback)
+    {
+    	var extFonts = this.graph.extFonts; 
+    	
+		if (extFonts != null && extFonts.length > 0)
 		{
-	      	// Temporarily attaches to DOM for rendering
-			// FIXME: If adding svgRoot to body, the text
-			// value of the math is appended, if not
-			// added to DOM then LaTeX does not work.
-			// This must be fixed to enable client-side export
-			// if math is enabled.
-//			document.body.appendChild(svgRoot);
-			Editor.MathJaxRender(svgRoot);
-	      
-			window.setTimeout(mxUtils.bind(this, function()
+			var styleCnt = '', waiting = 0;
+			
+			if (this.cachedGoogleFonts == null)
 			{
-				MathJax.Hub.Queue(mxUtils.bind(this, function ()
+				this.cachedGoogleFonts = {};
+			}
+			
+			var googleCssDone = mxUtils.bind(this, function()
+			{
+				if (waiting == 0)
+	            {
+					this.embedCssFonts(styleCnt, callback);
+	            }
+			});
+			
+			for (var i = 0; i < extFonts.length; i++)
+			{
+				(mxUtils.bind(this, function(fontName, fontUrl)
 				{
-					// Removes from DOM
-//					svgRoot.parentNode.removeChild(svgRoot);
-					
-					callback();
-				}));
-			}), 0);
+					if (fontUrl.indexOf(Editor.GOOGLE_FONTS) == 0)
+					{
+						if (this.cachedGoogleFonts[fontUrl] == null)
+						{
+							waiting++;
+							
+							this.loadUrl(fontUrl, mxUtils.bind(this, function(css)
+		                    {
+								this.cachedGoogleFonts[fontUrl] = css;
+								styleCnt += css;
+		                        waiting--;
+		                        googleCssDone();
+		                    }), mxUtils.bind(this, function(err)
+		                    {
+		                        // LATER: handle error
+		                        waiting--;
+		                        styleCnt += '@import url(' + fontUrl + ');';
+		                        googleCssDone();
+		                    }));
+						}
+						else
+						{
+							styleCnt += this.cachedGoogleFonts[fontUrl];
+						}
+					}
+					else
+					{
+						styleCnt += '@font-face {' +
+				            'font-family: "'+ fontName +'";' + 
+				            'src: url("'+ fontUrl +'");' + 
+				            '}';
+					}
+				}))(extFonts[i].name, extFonts[i].url);
+			}
+			
+			googleCssDone();
 		}
 		else
 		{
 			callback();
 		}
+    };
+	
+	/**
+	 * Copies MathJax CSS into the SVG output.
+	 */
+	Editor.prototype.addMathCss = function(svgRoot)
+	{
+		var defs = svgRoot.getElementsByTagName('defs');
+		
+		if (defs != null && defs.length > 0)
+		{
+			var styles = document.getElementsByTagName('style');
+			
+			for (var i = 0; i < styles.length; i++)
+			{
+				// Ignores style elements with no MathJax CSS
+				if (mxUtils.getTextContent(styles[i]).indexOf('MathJax') > 0)
+				{
+					defs[0].appendChild(styles[i].cloneNode(true));
+				}
+			}
+		}
 	};
 
-	//TODO This function is a replica of EditorUi one, it is planned to replace all calls to EditorUi one to point to this one
 	/**
-	 * See fixme in convertMath for client-side image generation with math.
+	 * Adds the global fontCss configuration.
+	 */
+	Editor.prototype.addFontCss = function(svgRoot, fontCss)
+	{
+		fontCss = (fontCss != null) ? fontCss : this.absoluteCssFonts(this.fontCss);
+
+		// Creates defs element if not available
+		if (fontCss != null)
+		{
+			var defs = svgRoot.getElementsByTagName('defs');
+			var svgDoc = svgRoot.ownerDocument;
+			var defsElt = null;
+			
+			if (defs.length == 0)
+			{
+				defsElt = (svgDoc.createElementNS != null) ?
+					svgDoc.createElementNS(mxConstants.NS_SVG, 'defs') : svgDoc.createElement('defs');
+				
+				if (svgRoot.firstChild != null)
+				{
+					svgRoot.insertBefore(defsElt, svgRoot.firstChild);
+				}
+				else
+				{
+					svgRoot.appendChild(defsElt);
+				}
+			}
+			else
+			{
+				defsElt = defs[0];
+			}
+
+			var style = (svgDoc.createElementNS != null) ?
+				svgDoc.createElementNS(mxConstants.NS_SVG, 'style') : svgDoc.createElement('style');
+			style.setAttribute('type', 'text/css');
+			mxUtils.setTextContent(style, fontCss);
+			defsElt.appendChild(style);
+		}
+	};
+	
+	/**
+	 * Disables client-side image export if math is enabled.
 	 */
 	Editor.prototype.isExportToCanvas = function()
 	{
-		return mxClient.IS_CHROMEAPP || (!this.graph.mathEnabled && this.useCanvasForExport);
+		return mxClient.IS_CHROMEAPP || this.useCanvasForExport;
 	};
 
-	//TODO This function is a replica of EditorUi one, it is planned to replace all calls to EditorUi one to point to this one
 	/**
 	 *
 	 */
 	Editor.prototype.exportToCanvas = function(callback, width, imageCache, background, error, limitHeight,
-		ignoreSelection, scale, transparentBackground, addShadow, converter, graph, border, noCrop)
+		ignoreSelection, scale, transparentBackground, addShadow, converter, graph, border, noCrop, grid,
+		keepTheme)
 	{
-		limitHeight = (limitHeight != null) ? limitHeight : true;
-		ignoreSelection = (ignoreSelection != null) ? ignoreSelection : true;
-		graph = (graph != null) ? graph : this.graph;
-		border = (border != null) ? border : 0;
-		
-		var bg = (transparentBackground) ? null : graph.background;
-		
-		if (bg == mxConstants.NONE)
+		try
 		{
-			bg = null;
-		}
-		
-		if (bg == null)
-		{
-			bg = background;
-		}
-		
-		// Handles special case where background is null but transparent is false
-		if (bg == null && transparentBackground == false)
-		{
-			bg = this.graph.defaultPageBackgroundColor;
-		}
-		
-		this.convertImages(graph.getSvg(bg, null, null, noCrop, null, ignoreSelection, null, null, null, addShadow),
-			mxUtils.bind(this, function(svgRoot)
-		{
-			var img = new Image();
+			limitHeight = (limitHeight != null) ? limitHeight : true;
+			ignoreSelection = (ignoreSelection != null) ? ignoreSelection : true;
+			graph = (graph != null) ? graph : this.graph;
+			border = (border != null) ? border : 0;
 			
-			img.onload = mxUtils.bind(this, function()
+			var bg = (transparentBackground) ? null : graph.background;
+			
+			if (bg == mxConstants.NONE)
 			{
-		   		try
-		   		{
-		   			var canvas = document.createElement('canvas');
-					var w = parseInt(svgRoot.getAttribute('width'));
-					var h = parseInt(svgRoot.getAttribute('height'));
-					scale = (scale != null) ? scale : 1;
+				bg = null;
+			}
+			
+			if (bg == null)
+			{
+				bg = background;
+			}
+			
+			// Handles special case where background is null but transparent is false
+			if (bg == null && transparentBackground == false)
+			{
+				bg = (keepTheme) ? this.graph.defaultPageBackgroundColor : '#ffffff';;
+			}
+			
+			this.convertImages(graph.getSvg(null, null, null, noCrop, null, ignoreSelection,
+				null, null, null, addShadow, null, keepTheme), mxUtils.bind(this, function(svgRoot)
+			{
+				try
+				{
+					var img = new Image();
 					
-					if (width != null)
+					img.onload = mxUtils.bind(this, function()
 					{
-						scale = (!limitHeight) ? width / w : Math.min(1, Math.min((width * 3) / (h * 4), width / w));
+				   		try
+				   		{
+				   			var canvas = document.createElement('canvas');
+							var w = parseInt(svgRoot.getAttribute('width'));
+							var h = parseInt(svgRoot.getAttribute('height'));
+							scale = (scale != null) ? scale : 1;
+							
+							if (width != null)
+							{
+								scale = (!limitHeight) ? width / w : Math.min(1, Math.min((width * 3) / (h * 4), width / w));
+							}
+							
+							w = Math.ceil(scale * w) + 2 * border;
+							h = Math.ceil(scale * h) + 2 * border;
+							
+							canvas.setAttribute('width', w);
+					   		canvas.setAttribute('height', h);
+					   		var ctx = canvas.getContext('2d');
+					   		
+					   		if (bg != null)
+					   		{
+					   			ctx.beginPath();
+								ctx.rect(0, 0, w, h);
+								ctx.fillStyle = bg;
+								ctx.fill();
+					   		}
+		
+						    ctx.scale(scale, scale);
+	
+						    function drawImage()
+						    {
+						    	// Workaround for broken data URI images in Safari on first export
+						   		if (mxClient.IS_SF)
+						   		{			   		
+									window.setTimeout(function()
+									{
+										ctx.drawImage(img, border / scale, border / scale);
+										callback(canvas);
+									}, 0);
+						   		}
+						   		else
+						   		{
+						   			ctx.drawImage(img, border / scale, border / scale);
+						   			callback(canvas);
+						   		}
+						    };
+						    
+						    if (grid)
+						    {
+							    var view = graph.view;
+							    var curViewScale = view.scale;
+							    view.scale = 1; //Reset the scale temporary to generate unscaled grid image which is then scaled
+								var gridImage = btoa(unescape(encodeURIComponent(view.createSvgGrid(view.gridColor))));
+								view.scale = curViewScale;
+								gridImage = 'data:image/svg+xml;base64,' + gridImage;
+				                var phase = graph.gridSize * view.gridSteps * scale;
+				                
+				                var b = graph.getGraphBounds();
+								var tx = view.translate.x * curViewScale;
+								var ty = view.translate.y * curViewScale;
+								var x0 = tx + (b.x - tx) / curViewScale;
+								var y0 = ty + (b.y - ty) / curViewScale;
+								
+								var background = new Image();
+		
+								background.onload = function()
+								{
+									try
+									{
+										var x = -Math.round(phase - mxUtils.mod((tx - x0) * scale, phase));
+										var y = -Math.round(phase - mxUtils.mod((ty - y0) * scale, phase));
+			
+										for (var i = x; i < w; i += phase)
+										{
+											for (var j = y; j < h; j += phase)
+											{
+												ctx.drawImage(background, i / scale, j / scale);	
+											}
+										}
+									
+										drawImage();
+									}
+							   		catch (e)
+							   		{
+							   			if (error != null)
+										{
+											error(e);
+										}
+							   		}
+								};
+								
+								background.onerror = function(e)
+								{
+									if (error != null)
+									{
+										error(e);
+									}
+								};
+								
+								background.src = gridImage;
+						    }
+						    else
+					    	{
+						    	drawImage();
+					    	}
+				   		}
+				   		catch (e)
+				   		{
+				   			if (error != null)
+							{
+								error(e);
+							}
+				   		}
+					});
+					
+					img.onerror = function(e)
+					{
+						//console.log('img', e, img.src);
+						
+						if (error != null)
+						{
+							error(e);
+						}
+					};
+
+					if (addShadow)
+					{
+						this.graph.addSvgShadow(svgRoot);
 					}
 					
-					w = Math.ceil(scale * w) + 2 * border;
-					h = Math.ceil(scale * h) + 2 * border;
+					if (this.graph.mathEnabled)
+					{
+						this.addMathCss(svgRoot);
+					}
 					
-					canvas.setAttribute('width', w);
-			   		canvas.setAttribute('height', h);
-			   		var ctx = canvas.getContext('2d');
-			   		
-			   		if (bg != null)
-			   		{
-			   			ctx.beginPath();
-						ctx.rect(0, 0, w, h);
-						ctx.fillStyle = bg;
-						ctx.fill();
-			   		}
-
-			   		ctx.scale(scale, scale);
-			   		
-			   		// Workaround for broken data URI images in Safari on first export
-			   		if (mxClient.IS_SF)
-			   		{			   		
-						window.setTimeout(function()
+					var done = mxUtils.bind(this, function()
+					{
+						try
 						{
-							ctx.drawImage(img, border / scale, border / scale);
-							callback(canvas);
-						}, 0);
-			   		}
-			   		else
-			   		{
-			   			ctx.drawImage(img, border / scale, border / scale);
-			   			callback(canvas);
-			   		}
-		   		}
-		   		catch (e)
-		   		{
-		   			if (error != null)
+							if (this.resolvedFontCss != null)
+							{
+								this.addFontCss(svgRoot, this.resolvedFontCss);
+							}
+							
+							img.src = Editor.createSvgDataUri(mxUtils.getXml(svgRoot));
+						}
+						catch (e)
+						{
+							if (error != null)
+							{
+								error(e);
+							}
+						}
+					});
+					
+					this.embedExtFonts(mxUtils.bind(this, function(extFontsEmbeddedCss)
+					{
+						try
+						{
+							if (extFontsEmbeddedCss != null)
+							{
+								this.addFontCss(svgRoot, extFontsEmbeddedCss);
+							}
+							
+							this.loadFonts(done);
+						}
+						catch (e)
+						{
+							if (error != null)
+							{
+								error(e);
+							}
+						}
+					}));
+				}
+				catch (e)
+				{
+					//console.log('src', e, img.src);
+					
+					if (error != null)
 					{
 						error(e);
 					}
-		   		}
-			});
-			
-			img.onerror = function(e)
-			{
-				//console.log('img', e, img.src);
-				
-				if (error != null)
-				{
-					error(e);
 				}
-			};
+			}), imageCache, converter);
+		}
+		catch (e)
+		{
+			if (error != null)
+			{
+				error(e);
+			}
+		}
+	};
+	
+	Editor.crcTable = [];
+	
+	for (var n = 0; n < 256; n++)
+	{
+		var c = n;
+		
+		for (var k = 0; k < 8; k++)
+		{
+			if ((c & 1) == 1)
+			{
+				c = 0xedb88320 ^ (c >>> 1);
+			}
+			else
+			{
+				c >>>= 1;
+			}
 
-			try
-			{
-				if (addShadow)
-				{
-					this.graph.addSvgShadow(svgRoot);
-				}
-				
-				var done = mxUtils.bind(this, function()
-				{
-					if (this.resolvedFontCss != null)
-					{
-						var st = document.createElement('style');
-						st.setAttribute('type', 'text/css');
-						st.innerHTML = this.resolvedFontCss;
-						
-						// Must be in defs section for FF to work
-						var defs = svgRoot.getElementsByTagName('defs');
-						defs[0].appendChild(st);
-					}
-					
-					this.convertMath(graph, svgRoot, true, mxUtils.bind(this, function()
-					{
-						img.src = this.createSvgDataUri(mxUtils.getXml(svgRoot));
-					}));
-				});
-				
-				this.loadFonts(done);
-			}
-			catch (e)
-			{
-				//console.log('src', e, img.src);
-				
-				if (error != null)
-				{
-					error(e);
-				}
-			}
-		}), imageCache, converter);
+			Editor.crcTable[n] = c;
+		}
+	}
+	
+	Editor.updateCRC = function(crc, data, off, len)
+	{
+		var c = crc;
+	
+		for (var n = 0; n < len; n++)
+		{
+			c = Editor.crcTable[(c ^ data.charCodeAt(off + n)) & 0xff] ^ (c >>> 8);
+		}
+	
+		return c;
 	};
 
-	//TODO This function is a replica of EditorUi one, it is planned to replace all calls to EditorUi one to point to this one
+	Editor.crc32 = function(str)
+	{
+	    var crc = 0 ^ (-1);
+
+	    for (var i = 0; i < str.length; i++ )
+	    {
+	        crc = (crc >>> 8) ^ Editor.crcTable[(crc ^ str.charCodeAt(i)) & 0xFF];
+	    }
+
+	    return (crc ^ (-1)) >>> 0;
+	};
+
 	/**
 	 * Adds the given text to the compressed or non-compressed text chunk.
 	 */
-	Editor.prototype.writeGraphModelToPng = function(data, type, key, value, error)
+	Editor.writeGraphModelToPng = function(data, type, key, value, error)
 	{
 		var base64 = data.substring(data.indexOf(',') + 1);
 		var f = (window.atob) ? atob(base64) : Base64.decode(base64, true);
@@ -1656,13 +2617,21 @@
 			{
 				result = f.substring(0, pos - 8);
 				
-				var chunkData = key + String.fromCharCode(0) +
-					((type == 'zTXt') ? String.fromCharCode(0) : '') + 
-					value;
+				if (type == 'pHYs' && key == 'dpi')
+				{
+					var dpm = Math.round(value / 0.0254); //One inch is equal to exactly 0.0254 meters.
+					var chunkData = writeInt(dpm) + writeInt(dpm) + String.fromCharCode(1);
+				}
+				else
+				{
+					var chunkData = key + String.fromCharCode(0) +
+						((type == 'zTXt') ? String.fromCharCode(0) : '') + 
+						value;
+				}
 				
 				var crc = 0xffffffff;
-				crc = EditorUi.prototype.updateCRC(crc, type, 0, 4); //TODO move code to Editor?
-				crc = EditorUi.prototype.updateCRC(crc, chunkData, 0, chunkData.length);
+				crc = Editor.updateCRC(crc, type, 0, 4);
+				crc = Editor.updateCRC(crc, chunkData, 0, chunkData.length);
 				
 				result += writeInt(chunkData.length) + type + chunkData + writeInt(crc ^ 0xffffffff);
 				result += f.substring(pos - 8, f.length);
@@ -1677,7 +2646,7 @@
 		while (n);
 		
 		return 'data:image/png;base64,' + ((window.btoa) ? btoa(result) : Base64.encode(result, true));
-	}
+	};
 
 	/**
 	 * Adds persistence for recent colors
@@ -2053,6 +3022,11 @@
 					}, function(checked)
 					{
 						ui.editor.setAutosave(checked);
+						
+						if (ui.editor.autosave && file.isModified())
+						{
+							file.fileChanged();
+						}
 					},
 					{
 						install: function(apply)
@@ -2221,6 +3195,14 @@
 	        {name: 'separatorColor', dispName: 'Separator Color', type: 'color', defVal: null},
 	    ];
 		
+		mxCellRenderer.defaultShapes['table'].prototype.customProperties = [
+			{name: 'rowLines', dispName: 'Row Lines', type: 'bool', defVal: true},
+			{name: 'columnLines', dispName: 'Column Lines', type: 'bool', defVal: true},
+			{name: 'fixedRows', dispName: 'Fixed Rows', type: 'bool', defVal: false},
+			{name: 'resizeLast', dispName: 'Resize Last Column', type: 'bool', defVal: false},
+			{name: 'resizeLastRow', dispName: 'Resize Last Row', type: 'bool', defVal: false}].
+			concat(mxCellRenderer.defaultShapes['swimlane'].prototype.customProperties);
+		
 		mxCellRenderer.defaultShapes['doubleEllipse'].prototype.customProperties = [
 	        {name: 'margin', dispName: 'Indent', type: 'float', min:0, defVal:4}
 	    ];
@@ -2326,9 +3308,10 @@
 			{fill: '#dae8fc', stroke: '#6c8ebf'}, {fill: '#d5e8d4', stroke: '#82b366'},
 			{fill: '#ffe6cc', stroke: '#d79b00'}, {fill: '#fff2cc', stroke: '#d6b656'},
 			{fill: '#f8cecc', stroke: '#b85450'}, {fill: '#e1d5e7', stroke: '#9673a6'}],
-			[{fill: '#60a917', stroke: '#2D7600', font: '#ffffff'}, {fill: '#008a00', stroke: '#005700', font: '#ffffff'},
-			{fill: '#1ba1e2', stroke: '#006EAF', font: '#ffffff'}, {fill: '#0050ef', stroke: '#001DBC', font: '#ffffff'},
-			{fill: '#6a00ff', stroke: '#3700CC', font: '#ffffff'}, {fill: '#aa00ff', stroke: '#7700CC', font: '#ffffff'},
+			[{fill: '', stroke: ''}, {fill: '#60a917', stroke: '#2D7600', font: '#ffffff'},
+			{fill: '#008a00', stroke: '#005700', font: '#ffffff'}, {fill: '#1ba1e2', stroke: '#006EAF', font: '#ffffff'},
+			{fill: '#0050ef', stroke: '#001DBC', font: '#ffffff'}, {fill: '#6a00ff', stroke: '#3700CC', font: '#ffffff'},
+			//{fill: '#aa00ff', stroke: '#7700CC', font: '#ffffff'},
 			{fill: '#d80073', stroke: '#A50040', font: '#ffffff'}, {fill: '#a20025', stroke: '#6F0000', font: '#ffffff'}],
 			[{fill: '#e51400', stroke: '#B20000', font: '#ffffff'}, {fill: '#fa6800', stroke: '#C73500', font: '#ffffff'},
 			{fill: '#f0a30a', stroke: '#BD7000', font: '#ffffff'}, {fill: '#e3c800', stroke: '#B09500', font: '#ffffff'},
@@ -2835,6 +3818,7 @@
 				else
 				{
 					td.innerHTML = pValue;
+					
 					mxEvent.addListener(td, 'click', mxUtils.bind(that, function()
 					{
 						var input = document.createElement('input');
@@ -2867,7 +3851,7 @@
 							
 							if (prop.allowAuto)
 							{
-								if (inputVal.trim().toLowerCase() == 'auto')
+								if (inputVal.trim != null && inputVal.trim().toLowerCase() == 'auto')
 								{
 									inputVal = 'auto';
 									pType = 'string';
@@ -3008,10 +3992,11 @@
 				
 				if (typeof(prop.isVisible) == 'function')
 				{
-					if (!prop.isVisible(state)) continue;
+					if (!prop.isVisible(state, this)) continue;
 				}
 				
-				var pValue = state.style[key] != null? mxUtils.htmlEntities(state.style[key] + '') : prop.defVal; //or undefined if defVal is undefined
+				var pValue = state.style[key] != null? mxUtils.htmlEntities(state.style[key] + '') :
+					((prop.getDefaultValue != null) ? prop.getDefaultValue(state, this) : prop.defVal); //or undefined if defVal is undefined
 
 				if (prop.type == 'separator')
 				{
@@ -3083,10 +4068,61 @@
 			var stylenames = ['plain-gray', 'plain-blue', 'plain-green', 'plain-turquoise',
 				'plain-orange', 'plain-yellow', 'plain-red', 'plain-pink', 'plain-purple', 'gray',
 				'blue', 'green', 'turquoise', 'orange', 'yellow', 'red', 'pink', 'purple'];
-
-			function updateScheme(colorsets)
+			
+			// Maximum palettes to switch the switcher
+			var maxEntries = 10;
+						
+			// Selector
+			var switcher = document.createElement('div');
+			switcher.style.whiteSpace = 'nowrap';
+			switcher.style.position = 'relative';
+			switcher.style.textAlign = 'center';
+			
+			var dots = [];
+			
+			for (var i = 0; i < this.defaultColorSchemes.length; i++)
 			{
-				function addButton(colorset)
+				var dot = document.createElement('div');
+				dot.style.display = 'inline-block';
+				dot.style.width = '6px';
+				dot.style.height = '6px';
+				dot.style.marginLeft = '4px';
+				dot.style.marginRight = '3px';
+				dot.style.borderRadius = '3px';
+				dot.style.cursor = 'pointer';
+				dot.style.background = 'transparent';
+				dot.style.border = '1px solid #b5b6b7';
+				
+				(mxUtils.bind(this, function(index)
+				{
+					mxEvent.addListener(dot, 'click', mxUtils.bind(this, function()
+					{
+						setScheme(index);
+					}));
+				}))(i);
+				
+				mxEvent.add
+				
+				dots.push(dot);
+				
+				switcher.appendChild(dot);
+			}
+			
+			var setScheme = mxUtils.bind(this, function(index)
+			{
+				if (this.editorUi.currentScheme != null)
+				{
+					dots[this.editorUi.currentScheme].style.background = 'transparent';
+				}
+				
+				this.editorUi.currentScheme = index;
+				updateScheme(this.defaultColorSchemes[this.editorUi.currentScheme]);
+				dots[this.editorUi.currentScheme].style.background = '#84d7ff';
+			});
+			
+			var updateScheme = mxUtils.bind(this, function(colorsets)
+			{
+				var addButton = mxUtils.bind(this, function(colorset)
 				{
 					var btn = mxUtils.button('', function(evt)
 					{
@@ -3164,7 +4200,7 @@
 	
 					btn.className = 'geStyleButton';
 					btn.style.width = '36px';
-					btn.style.height = '30px';
+					btn.style.height = (this.defaultColorSchemes.length <= maxEntries) ? '24px' : '30px';
 					btn.style.margin = '0px 6px 6px 0px';
 					
 					if (colorset != null)
@@ -3190,12 +4226,12 @@
 						else if (colorset['fill'] == '')
 						{
 							btn.style.backgroundColor = mxUtils.getValue(graph.defaultVertexStyle,
-								mxConstants.STYLE_FILLCOLOR, (uiTheme == 'dark') ?'#000000' : '#ffffff');
+								mxConstants.STYLE_FILLCOLOR, (uiTheme == 'dark') ?'#2a2a2a' : '#ffffff');
 						}
 						else
 						{
 							btn.style.backgroundColor = colorset['fill'] || mxUtils.getValue(graph.defaultVertexStyle,
-								mxConstants.STYLE_FILLCOLOR, (uiTheme == 'dark') ?'#000000' : '#ffffff');
+								mxConstants.STYLE_FILLCOLOR, (uiTheme == 'dark') ?'#2a2a2a' : '#ffffff');
 						}
 						
 						if (colorset['stroke'] == mxConstants.NONE)
@@ -3205,12 +4241,12 @@
 						else if (colorset['stroke'] == '')
 						{
 							btn.style.border = '1px solid ' + mxUtils.getValue(graph.defaultVertexStyle, 
-								mxConstants.STYLE_STROKECOLOR, (uiTheme != 'dark') ?'#000000' : '#ffffff');
+								mxConstants.STYLE_STROKECOLOR, (uiTheme != 'dark') ?'#2a2a2a' : '#ffffff');
 						}
 						else
 						{
 							btn.style.border = '1px solid ' + (colorset['stroke'] || mxUtils.getValue(graph.defaultVertexStyle,
-									mxConstants.STYLE_STROKECOLOR, (uiTheme != 'dark') ?'#000000' : '#ffffff'));
+									mxConstants.STYLE_STROKECOLOR, (uiTheme != 'dark') ?'#2a2a2a' : '#ffffff'));
 						}
 					}
 					else
@@ -3223,7 +4259,7 @@
 					}
 					
 					picker.appendChild(btn);
-				};
+				});
 				
 				picker.innerHTML = '';
 				
@@ -3236,25 +4272,30 @@
 					
 					addButton(colorsets[i]);
 				}
-			};
+			});
 
 			if (this.editorUi.currentScheme == null)
 			{
-				this.editorUi.currentScheme = 0;
+				setScheme((uiTheme == 'dark') ? 1 : 0);
 			}
+			else
+			{
+				setScheme(this.editorUi.currentScheme);
+			}
+			
+			var bottom = (this.defaultColorSchemes.length <= maxEntries) ? 28 : 8;
 
 			var left = document.createElement('div');
-			left.style.cssText = 'position:absolute;left:10px;top:8px;bottom:8px;width:20px;margin:4px;opacity:0.5;' +
+			left.style.cssText = 'position:absolute;left:10px;top:8px;bottom:' + bottom + 'px;width:20px;margin:4px;opacity:0.5;' +
 				'background-repeat:no-repeat;background-position:center center;background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAQBAMAAADQT4M0AAAAIVBMVEUAAAB2dnZ4eHh3d3d1dXVxcXF2dnZ2dnZ2dnZxcXF2dnYmb3w1AAAACnRSTlMAfCTkhhvb7cQSPH2JPgAAADRJREFUCNdjwACMAmBKaiGYs2oJmLPKAZ3DabU8AMRTXpUKopislqFyVzCAuUZgikkBZjoAcMYLnp53P/UAAAAASUVORK5CYII=);';
 			
 			mxEvent.addListener(left, 'click', mxUtils.bind(this, function()
 			{
-				this.editorUi.currentScheme = mxUtils.mod(this.editorUi.currentScheme - 1, this.defaultColorSchemes.length);
-				updateScheme(this.defaultColorSchemes[this.editorUi.currentScheme]);
+				setScheme(mxUtils.mod(this.editorUi.currentScheme - 1, this.defaultColorSchemes.length));
 			}));
 			
 			var right = document.createElement('div');
-			right.style.cssText = 'position:absolute;left:202px;top:8px;bottom:8px;width:20px;margin:4px;opacity:0.5;' +
+			right.style.cssText = 'position:absolute;left:202px;top:8px;bottom:' + bottom + 'px;width:20px;margin:4px;opacity:0.5;' +
 				'background-repeat:no-repeat;background-position:center center;background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAQBAMAAADQT4M0AAAAIVBMVEUAAAB2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnYBuwCcAAAACnRSTlMAfCTkhhvb7cQSPH2JPgAAADZJREFUCNdjQAOMAmBKaiGY8loF5rKswsZlrVo8AUiFrTICcbIWK8A5DF1gDoMymMPApIAwHwCS0Qx/U7qCBQAAAABJRU5ErkJggg==);';
 
 			if (this.defaultColorSchemes.length > 1)
@@ -3265,8 +4306,7 @@
 			
 			mxEvent.addListener(right, 'click', mxUtils.bind(this, function()
 			{
-				this.editorUi.currentScheme = mxUtils.mod(this.editorUi.currentScheme + 1, this.defaultColorSchemes.length);
-				updateScheme(this.defaultColorSchemes[this.editorUi.currentScheme]);
+				setScheme(mxUtils.mod(this.editorUi.currentScheme + 1, this.defaultColorSchemes.length));
 			}));
 			
 			// Hover state
@@ -3286,6 +4326,11 @@
 			addHoverState(right);
 			
 			updateScheme(this.defaultColorSchemes[this.editorUi.currentScheme]);
+			
+			if (this.defaultColorSchemes.length <= maxEntries)
+			{
+				div.appendChild(switcher);
+			}
 			
 			return div;
 		};
@@ -3423,10 +4468,17 @@
 	 * Adds rack child layout style.
 	 */
 	var graphInit = Graph.prototype.init;
+	
 	Graph.prototype.init = function()
 	{
 		graphInit.apply(this, arguments);
 
+		//TODO initialize Freehand in the correct location!
+		if (window.mxFreehand)
+		{
+			this.freehand = new mxFreehand(this);
+		}
+		
 		// Override insert location for current mouse point
 		var mouseEvent = null;
 		
@@ -3502,8 +4554,18 @@
 				{
 					var rackLayout = new mxStackLayout(this.graph, false);
 					
+					var unitSize = 20;
+					
+					if (style['rackUnitSize'] != null)
+					{
+						rackLayout.gridSize = parseFloat(style['rackUnitSize']);
+					}
+					else
+					{
+						rackLayout.gridSize = (typeof mxRackContainer !== 'undefined') ? mxRackContainer.unitSize : unitSize;
+					}
+					
 					rackLayout.fill = true;
-					rackLayout.gridSize = (typeof mxRackContainer !== 'undefined') ? mxRackContainer.unitSize : 20;
 					rackLayout.marginLeft = style['marginLeft'] || 0;
 					rackLayout.marginRight = style['marginRight'] || 0;
 					rackLayout.marginTop = style['marginTop'] || 0;
@@ -3539,49 +4601,62 @@
 			
 			return layoutManagerGetLayout.apply(this, arguments);
 		}
+		
+		this.updateGlobalUrlVariables();
 	};
 
 	/**
-	 * Temporarily overrides stylesheet during image export in dark mode.
+	 * Disables fast zoom with shadow in lightbox for Safari
+	 * to work around blank output on retina screen.
 	 */
-	var graphGetSvg = Graph.prototype.getSvg;
+	var graphIsFastZoomEnabled = Graph.prototype.isFastZoomEnabled;
 	
-	Graph.prototype.getSvg = function()
+	Graph.prototype.isFastZoomEnabled = function()
 	{
-		var temp = null;
+		return graphIsFastZoomEnabled.apply(this, arguments) && (!this.shadowVisible || !mxClient.IS_SF);
+	};
+	
+	/**
+	 * Updates the global variables from the vars URL parameter.
+	 */
+	Graph.prototype.updateGlobalUrlVariables = function()
+	{
+		this.globalVars = Editor.globalVars;
 		
-		if (this.themes != null && this.defaultThemeName == 'darkTheme')
+		if (urlParams['vars'] != null)
 		{
-			temp = this.stylesheet;
-			this.stylesheet = new mxStylesheet();
-			var node = this.themes['default-style2'];
-			var dec = new mxCodec(node.ownerDocument);
-			dec.decode(node, this.getStylesheet());
-			this.refresh();
+			try
+			{
+				this.globalVars = (this.globalVars != null) ? mxUtils.clone(this.globalVars) : {};
+				var vars = JSON.parse(decodeURIComponent(urlParams['vars']));
+				
+				if (vars != null)
+				{
+					for (var key in vars)
+					{
+						this.globalVars[key] = vars[key];
+					}
+				}
+			}
+			catch (e)
+			{
+				if (window.console != null)
+				{
+					console.log('Error in vars URL parameter: ' + e);
+				}
+			}
 		}
-		
-		var result = graphGetSvg.apply(this, arguments);
-		
-		if (temp != null)
-		{
-			this.stylesheet = temp;
-			this.refresh();
-		}
-		
-		return result;
 	};
 
 	/**
-	 * Safari has problems with math typesetting inside foreignObjects.
+	 * Returns all global variables used for export. This function never returns null.
+	 * This can be overridden by plugins to return global variables for export.
 	 */
-	var graphIsCssTransformsSupported = Graph.prototype.isCssTransformsSupported;
-	
-	Graph.prototype.isCssTransformsSupported = function()
+	Graph.prototype.getExportVariables = function()
 	{
-		// FIXME: Safari only disabled due to mathjax rendering errors
-		return graphIsCssTransformsSupported.apply(this, arguments) && !mxClient.IS_SF;
+		return (this.globalVars != null) ? mxUtils.clone(this.globalVars) : {};
 	};
-
+	
 	/**
 	 * Adds support for vars URL parameter.
 	 */
@@ -3591,30 +4666,156 @@
 	{
 		var val = graphGetGlobalVariable.apply(this, arguments);
 		
-		if (val == null)
+		if (val == null && this.globalVars != null)
 		{
-			if (this.globalUrlVars == null && urlParams['vars'] != null)
-			{
-				try
-				{
-					this.globalUrlVars = JSON.parse(decodeURIComponent(urlParams['vars']));
-				}
-				catch (e)
-				{
-					if (window.console != null)
-					{
-						console.log('Error in vars URL parameter: ' + e);
-					}
-				}
-			}
-			
-			if (this.globalUrlVars != null)
-			{
-				val = this.globalUrlVars[name];
-			}
+			val = this.globalVars[name];
 		}
 		
 		return val;
+	};
+
+	/**
+	 * Cached default stylesheet for image export in dark mode.
+	 */
+	Graph.prototype.getDefaultStylesheet = function()
+	{
+		if (this.defaultStylesheet == null)
+		{
+			var node = this.themes['default-style2'];
+			var dec = new mxCodec(node.ownerDocument);
+			this.defaultStylesheet = dec.decode(node);
+		}
+		
+		return this.defaultStylesheet;
+	};
+	
+	/**
+	 * Overiddes function to use url parameter
+	 */
+	Graph.prototype.isViewer = function()
+	{
+		return urlParams['viewer'];
+	};
+
+	/**
+	 * Temporarily overrides stylesheet during image export in dark mode.
+	 */
+	var graphGetSvg = Graph.prototype.getSvg;
+	
+	Graph.prototype.getSvg = function(background, scale, border, nocrop, crisp,
+		ignoreSelection, showText, imgExport, linkTarget, hasShadow, incExtFonts, keepTheme)
+	{
+		var temp = null;
+		
+		if (!keepTheme && this.themes != null && this.defaultThemeName == 'darkTheme')
+		{
+			temp = this.stylesheet;
+			this.stylesheet = this.getDefaultStylesheet();
+			// LATER: Fix math export in dark mode by fetching text nodes before
+			// calling refresh and changing the font color in-place
+			this.refresh();
+		}
+		
+		var result = graphGetSvg.apply(this, arguments);
+		
+		// Adds extrnal fonts
+		if (incExtFonts && this.extFonts != null && this.extFonts.length > 0)
+		{
+			var svgDoc = result.ownerDocument;
+			var style = (svgDoc.createElementNS != null) ?
+		    	svgDoc.createElementNS(mxConstants.NS_SVG, 'style') : svgDoc.createElement('style');
+			svgDoc.setAttributeNS != null? style.setAttributeNS('type', 'text/css') : style.setAttribute('type', 'text/css');
+			
+			var prefix = '';
+			var postfix = '';
+			    	
+			for (var i = 0; i < this.extFonts.length; i++)
+			{
+				var fontName = this.extFonts[i].name, fontUrl = this.extFonts[i].url;
+				
+				if (fontUrl.indexOf(Editor.GOOGLE_FONTS) == 0)
+				{
+					prefix += '@import url(' + fontUrl + ');\n';
+				}
+				else
+				{
+					postfix += '@font-face {\n' +
+			            'font-family: "'+ fontName +'";\n' + 
+			            'src: url("'+ fontUrl +'");\n' + 
+			            '}\n';
+				}				
+			}
+			
+			style.appendChild(svgDoc.createTextNode(prefix + postfix));
+			result.getElementsByTagName('defs')[0].appendChild(style);
+		}
+		
+		if (temp != null)
+		{
+			this.stylesheet = temp;
+			this.refresh();
+		}
+		
+		return result;
+	};
+	
+	/**
+	 * Overridden to support client-side math typesetting.
+	 */
+	var graphCreateSvgImageExport = Graph.prototype.createSvgImageExport;
+	
+	Graph.prototype.createSvgImageExport = function()
+	{
+		var imgExport = graphCreateSvgImageExport.apply(this, arguments);
+		
+		if (this.mathEnabled)
+		{
+			var graph = this;
+			var origin = graph.container.getBoundingClientRect();
+			var y0 = graph.container.scrollTop - origin.y;
+			var x0 = graph.container.scrollLeft - origin.x;
+			var drawText = imgExport.drawText;
+			
+			// Replaces input with rendered markup
+			imgExport.drawText = function(state, c)
+			{
+				if (state.text != null && state.text.value != null && state.text.checkBounds() &&
+					(mxUtils.isNode(state.text.value) || state.text.dialect == mxConstants.DIALECT_STRICTHTML))
+				{
+					var clone = state.text.getContentNode();
+					
+					if (clone != null)
+					{
+						clone = clone.cloneNode(true);
+						
+						// Removes duplicate math output
+						if (clone.getElementsByTagNameNS)
+						{
+							var ele = clone.getElementsByTagNameNS('http://www.w3.org/1998/Math/MathML', 'math');
+							
+							while (ele.length > 0)
+							{
+								ele[0].parentNode.removeChild(ele[0]);
+							}
+						}
+						
+						if (clone.innerHTML != null)
+						{
+							var prev = state.text.value;
+							state.text.value = clone.innerHTML;
+							drawText.apply(this, arguments);
+							state.text.value = prev;
+						}
+					}
+				}
+				else
+				{
+					drawText.apply(this, arguments);
+				}
+			};
+		}
+		
+		return imgExport;
 	};
 
 	/**
@@ -3661,6 +4862,7 @@
 	 * Sets default style (used in editor.get/setGraphXml below)
 	 */
 	var graphLoadStylesheet = Graph.prototype.loadStylesheet;
+	
 	Graph.prototype.loadStylesheet = function()
 	{
 		graphLoadStylesheet.apply(this, arguments);
@@ -3694,91 +4896,214 @@
 		if (href.substring(0, 17) == 'data:action/json,')
 		{
 			// Some actions are stateless and must be handled before the transaction
-			var action = JSON.parse(href.substring(17));
+			var link = JSON.parse(href.substring(17));
 
-			if (action.actions != null)
+			// When adding new actions that reference cell IDs support for updating
+			// those cell IDs must be handled in Graph.updateCustomLinkActions
+			if (link.actions != null)
 			{
 				// Executes open actions before starting transaction
-				for (var i = 0; i < action.actions.length; i++)
+				for (var i = 0; i < link.actions.length; i++)
 				{
-					if (action.actions[i].open != null)
+					var action = link.actions[i];
+					
+					if (action.open != null)
 					{
-						if (this.isCustomLink(action.actions[i].open))
+						if (this.isCustomLink(action.open))
 						{
-							if (!this.customLinkClicked(action.actions[i].open))
+							if (!this.customLinkClicked(action.open))
 							{
 								return;
 							}
 						}
 						else
 						{
-							this.openLink(action.actions[i].open);
+							this.openLink(action.open);
 						}
 					}
 				}
 
+				// Executes all actions that change cell states
 	    		this.model.beginUpdate();
 	    		try
 	    		{
-					for (var i = 0; i < action.actions.length; i++)
+					for (var i = 0; i < link.actions.length; i++)
 					{
-						this.handleLinkAction(action.actions[i]);
+						var action = link.actions[i];
+						
+						if (action.toggle != null)
+						{
+							this.toggleCells(this.getCellsForAction(action.toggle, true));
+						}
+						
+						if (action.show != null)
+						{
+							this.setCellsVisible(this.getCellsForAction(action.show, true), true);
+						}
+						
+						if (action.hide != null)
+						{
+							this.setCellsVisible(this.getCellsForAction(action.hide, true), false);
+						}
 					}
 				}
 	    		finally
 	    		{
 	    			this.model.endUpdate();
 	    		}
+	    		
+				// Executes stateless actions on cells
+				for (var i = 0; i < link.actions.length; i++)
+				{
+					var action = link.actions[i];
+					var cells = [];
+					
+					if (action.select != null && this.isEnabled())
+					{
+						cells = this.getCellsForAction(action.select);
+						this.setSelectionCells(cells);
+					}
+
+					if (action.highlight != null)
+					{
+						cells = this.getCellsForAction(action.highlight);
+						this.highlightCells(cells, action.highlight.color,
+							action.highlight.duration, action.highlight.opacity);
+					}
+
+					if (action.scroll != null)
+					{
+						cells = this.getCellsForAction(action.scroll);
+					}
+					
+					if (cells.length > 0)
+					{
+						this.scrollCellToVisible(cells[0]);
+					}
+				}
 			}
 		}
 	};
-
+	
 	/**
-	 * Executes the given action if it must be executed inside of a transaction.
+	 * Updates cell IDs in custom links on the given cell and its label.
 	 */
-	Graph.prototype.handleLinkAction = function(action)
+	Graph.prototype.updateCustomLinksForCell = function(mapping, cell)
 	{
-		var cells = [];
+		var href = this.getLinkForCell(cell);
 		
-		if (action.select != null && this.isEnabled())
+		if (href != null && href.substring(0, 17) == 'data:action/json,')
 		{
-			cells = this.getCellsForAction(action.select);
-			this.setSelectionCells(cells);
-		}
-
-		if (action.highlight != null)
-		{
-			cells = this.getCellsForAction(action.highlight);
-			this.highlightCells(cells, action.highlight.color,
-				action.highlight.duration, action.highlight.opacity);
-		}
-
-		if (action.toggle != null)
-		{
-			this.toggleCells(this.getCellsForAction(action.toggle, true));
+			this.setLinkForCell(cell, this.updateCustomLink(mapping, href));
 		}
 		
-		if (action.show != null)
+		if (this.isHtmlLabel(cell))
 		{
-			this.setCellsVisible(this.getCellsForAction(action.show, true), true);
-		}
-		
-		if (action.hide != null)
-		{
-			this.setCellsVisible(this.getCellsForAction(action.hide, true), false);
-		}
-
-		if (action.scroll != null)
-		{
-			cells = this.getCellsForAction(action.scroll);
-		}
-		
-		if (cells.length > 0)
-		{
-			this.scrollCellToVisible(cells[0]);
+			var temp = document.createElement('div');
+			temp.innerHTML = this.sanitizeHtml(this.getLabel(cell));
+			var links = temp.getElementsByTagName('a');
+			var changed = false;
+			
+			for (var i = 0; i < links.length; i++)
+			{
+				href = links[i].getAttribute('href');
+				
+				if (href != null && href.substring(0, 17) == 'data:action/json,')
+				{
+					links[i].setAttribute('href', this.updateCustomLink(mapping, href));
+					changed = true;
+				}
+			}
+			
+			if (changed)
+			{
+				this.labelChanged(cell, temp.innerHTML);
+			}
 		}
 	};
+	
+	/**
+	 * Updates cell IDs in the given custom link and returns the updated link.
+	 */
+	Graph.prototype.updateCustomLink = function(mapping, href)
+	{
+		if (href.substring(0, 17) == 'data:action/json,')
+		{
+			try
+			{
+				// Some actions are stateless and must be handled before the transaction
+				var link = JSON.parse(href.substring(17));
 
+				if (link.actions != null)
+				{
+					this.updateCustomLinkActions(mapping, link.actions);
+					href = 'data:action/json,' + JSON.stringify(link);
+				}
+			}
+			catch (e)
+			{
+				// Ignore
+			}
+		}
+		
+		return href;
+	};
+
+	/**
+	 * Updates cell IDs in the given custom link actions.
+	 */
+	Graph.prototype.updateCustomLinkActions = function(mapping, actions)
+	{
+		for (var i = 0; i < actions.length; i++)
+		{
+			var action = actions[i];
+			
+			this.updateCustomLinkAction(mapping, action.toggle);
+			this.updateCustomLinkAction(mapping, action.show);
+			this.updateCustomLinkAction(mapping, action.hide);
+			this.updateCustomLinkAction(mapping, action.select);
+			this.updateCustomLinkAction(mapping, action.highlight);
+			this.updateCustomLinkAction(mapping, action.scroll);
+		}
+	};
+	
+	/**
+	 * Updates cell IDs in the given custom link action.
+	 */
+	Graph.prototype.updateCustomLinkAction = function(mapping, action)
+	{
+		if (action != null && action.cells != null)
+		{
+			var result = [];
+			
+			for (var i = 0; i < action.cells.length; i++)
+			{
+				if (action.cells[i] == '*')
+				{
+					result.push(action.cells[i]);
+				}
+				else
+				{
+					var temp = mapping[action.cells[i]];
+					
+					if (temp != null)
+					{
+						if (temp != '')
+						{
+							result.push(temp);
+						}
+					}
+					else
+					{
+						result.push(action.cells[i]);
+					}
+				}
+			}
+			
+			action.cells = result;
+		}
+	};
+	
 	/**
 	 * Handles each action in the action array of a custom link. This code
 	 * handles toggle actions for cell IDs.
@@ -3824,7 +5149,7 @@
 		
 		return result;
 	};
-	
+
 	/**
 	 * Returns the cells in the model (or given array) that have all of the
 	 * given tags in their tags property.
@@ -3838,6 +5163,18 @@
 			cells = (cells != null) ? cells : this.model.getDescendants(this.model.getRoot());
 			propertyName = (propertyName != null) ? propertyName : 'tags';
 			
+			var tagCount = 0;
+			var lookup = {};
+			
+			for (var i = 0; i < tagList.length; i++)
+			{
+				if (tagList[i].length > 0)
+				{
+					lookup[tagList[i].toLowerCase()] = true;
+					tagCount++;
+				}
+			}
+			
 			for (var i = 0; i < cells.length; i++)
 			{
 				if ((includeLayers && this.model.getParent(cells[i]) == this.model.root) ||
@@ -3845,17 +5182,25 @@
 				{
 					var tags = (cells[i].value != null && typeof(cells[i].value) == 'object') ?
 						mxUtils.trim(cells[i].value.getAttribute(propertyName) || '') : '';
-					var match = true;
+					var match = false;
 	
 					if (tags.length > 0)
 					{
 						var tmp = tags.toLowerCase().split(' ');
 						
-						for (var j = 0; j < tagList.length && match; j++)
+						if (tmp.length >= tagList.length)
 						{
-							var tag = mxUtils.trim(tagList[j]).toLowerCase();
+							var matchCount = 0;
 							
-							match = match && (tag.length == 0 || mxUtils.indexOf(tmp, tag) >= 0);
+							for (var j = 0; j < tmp.length && (matchCount < tagCount); j++)
+							{
+								if (lookup[tmp[j]] != null)
+								{
+									matchCount++;
+								}
+							}
+							
+							match = matchCount == tagCount;
 						}
 					}
 					else
@@ -3873,7 +5218,7 @@
 		
 		return result;
 	};
-
+	
 	/**
 	 * Shows or hides the given cells.
 	 */
@@ -4076,7 +5421,7 @@
 	 */
 	Graph.prototype.setShadowVisible = function(value, fireEvent)
 	{
-		if (mxClient.IS_SVG)
+		if (mxClient.IS_SVG && !mxClient.IS_SF)
 		{
 			fireEvent = (fireEvent != null) ? fireEvent : true;
 			this.shadowVisible = value;
@@ -4136,8 +5481,11 @@
 	mxStencilRegistry.libraries['arrows2'] = [SHAPES_PATH + '/mxArrows.js'];
 	mxStencilRegistry.libraries['atlassian'] = [STENCIL_PATH + '/atlassian.xml', SHAPES_PATH + '/mxAtlassian.js'];
 	mxStencilRegistry.libraries['bpmn'] = [SHAPES_PATH + '/bpmn/mxBpmnShape2.js', STENCIL_PATH + '/bpmn.xml'];
+	mxStencilRegistry.libraries['c4'] = [SHAPES_PATH + '/mxC4.js'];
+	mxStencilRegistry.libraries['cisco19'] = [SHAPES_PATH + '/mxCisco19.js', STENCIL_PATH + '/cisco19.xml'];
 	mxStencilRegistry.libraries['dfd'] = [SHAPES_PATH + '/mxDFD.js'];
 	mxStencilRegistry.libraries['er'] = [SHAPES_PATH + '/er/mxER.js'];
+	mxStencilRegistry.libraries['kubernetes'] = [SHAPES_PATH + '/mxKubernetes.js', STENCIL_PATH + '/kubernetes.xml'];
 	mxStencilRegistry.libraries['flowchart'] = [SHAPES_PATH + '/mxFlowchart.js', STENCIL_PATH + '/flowchart.xml'];
 	mxStencilRegistry.libraries['ios'] = [SHAPES_PATH + '/mockup/mxMockupiOS.js'];
 	mxStencilRegistry.libraries['rackGeneral'] = [SHAPES_PATH + '/rack/mxRack.js', STENCIL_PATH + '/rack/general.xml'];
@@ -4161,9 +5509,10 @@
 	mxStencilRegistry.libraries['mockup/navigation'] = [SHAPES_PATH + '/mockup/mxMockupNavigation.js', STENCIL_PATH + '/mockup/misc.xml'];
 	mxStencilRegistry.libraries['mockup/text'] = [SHAPES_PATH + '/mockup/mxMockupText.js'];
 	mxStencilRegistry.libraries['floorplan'] = [SHAPES_PATH + '/mxFloorplan.js', STENCIL_PATH + '/floorplan.xml'];
-	mxStencilRegistry.libraries['bootstrap'] = [SHAPES_PATH + '/mxBootstrap.js', STENCIL_PATH + '/bootstrap.xml'];
+	mxStencilRegistry.libraries['bootstrap'] = [SHAPES_PATH + '/mxBootstrap.js', SHAPES_PATH + '/mxBasic.js', STENCIL_PATH + '/bootstrap.xml'];
 	mxStencilRegistry.libraries['gmdl'] = [SHAPES_PATH + '/mxGmdl.js', STENCIL_PATH + '/gmdl.xml'];
 	mxStencilRegistry.libraries['gcp2'] = [SHAPES_PATH + '/mxGCP2.js', STENCIL_PATH + '/gcp2.xml'];
+	mxStencilRegistry.libraries['ibm'] = [SHAPES_PATH + '/mxIBM.js', STENCIL_PATH + '/ibm.xml'];
 	mxStencilRegistry.libraries['cabinets'] = [SHAPES_PATH + '/mxCabinets.js', STENCIL_PATH + '/cabinets.xml'];
 	mxStencilRegistry.libraries['archimate'] = [SHAPES_PATH + '/mxArchiMate.js'];
 	mxStencilRegistry.libraries['archimate3'] = [SHAPES_PATH + '/mxArchiMate3.js'];
@@ -4174,6 +5523,7 @@
 	mxStencilRegistry.libraries['aws4'] = [SHAPES_PATH + '/mxAWS4.js', STENCIL_PATH + '/aws4.xml'];
 	mxStencilRegistry.libraries['aws4b'] = [SHAPES_PATH + '/mxAWS4.js', STENCIL_PATH + '/aws4.xml'];
 	mxStencilRegistry.libraries['veeam'] = [STENCIL_PATH + '/veeam/2d.xml', STENCIL_PATH + '/veeam/3d.xml', STENCIL_PATH + '/veeam/veeam.xml'];
+	mxStencilRegistry.libraries['veeam2'] = [STENCIL_PATH + '/veeam/2d.xml', STENCIL_PATH + '/veeam/3d.xml', STENCIL_PATH + '/veeam/veeam2.xml'];
 	mxStencilRegistry.libraries['pid2inst'] = [SHAPES_PATH + '/pid2/mxPidInstruments.js'];
 	mxStencilRegistry.libraries['pid2misc'] = [SHAPES_PATH + '/pid2/mxPidMisc.js', STENCIL_PATH + '/pid/misc.xml'];
 	mxStencilRegistry.libraries['pid2valves'] = [SHAPES_PATH + '/pid2/mxPidValves.js'];
@@ -4481,8 +5831,35 @@
 			// Workaround to match available paper size in actual print output
 			printScale *= 0.75;
 			
+			// Disables dark mode while printing
+			var darkStylesheet = null;
+			
+			if (graph.themes != null && graph.defaultThemeName == 'darkTheme')
+			{
+				darkStylesheet = graph.stylesheet;
+				graph.stylesheet = graph.getDefaultStylesheet()
+				graph.refresh();
+			}
+			
 			function printGraph(thisGraph, pv, forcePageBreaks)
 			{
+				// Workaround for CSS transforms affecting the print output
+				// is to disable during print output and restore after
+				var prev = thisGraph.useCssTransforms;
+				var prevTranslate = thisGraph.currentTranslate;
+				var prevScale = thisGraph.currentScale;
+				var prevViewTranslate = thisGraph.view.translate;
+				var prevViewScale = thisGraph.view.scale;
+
+				if (thisGraph.useCssTransforms)
+				{
+					thisGraph.useCssTransforms = false;
+					thisGraph.currentTranslate = new mxPoint(0,0);
+					thisGraph.currentScale = 1;
+					thisGraph.view.translate = new mxPoint(0,0);
+					thisGraph.view.scale = 1;
+				}
+
 				// Negative coordinates are cropped or shifted if page visible
 				var gb = thisGraph.getGraphBounds();
 				var border = 0;
@@ -4529,7 +5906,7 @@
 				{
 					autoOrigin = true;
 				}
-
+				
 				if (pv == null)
 				{
 					pv = PrintDialog.createPrintPreview(thisGraph, scale, pf, border, x0, y0, autoOrigin);
@@ -4550,11 +5927,44 @@
 					{
 						writeHead.apply(this, arguments);
 						
+						// Fixes font weight for PDF export in Chrome
+						if (mxClient.IS_GC)
+						{
+							doc.writeln('<style type="text/css">');
+							doc.writeln('@media print {');
+							doc.writeln('span.MathJax_SVG svg { shape-rendering: crispEdges; }');
+							doc.writeln('}');
+							doc.writeln('</style>');
+						}
+
 						if (editorUi.editor.fontCss != null)
 						{
 							doc.writeln('<style type="text/css">');
 							doc.writeln(editorUi.editor.fontCss);
 							doc.writeln('</style>');
+						}
+						
+						if (thisGraph.extFonts != null)
+						{
+							for (var i = 0; i < thisGraph.extFonts.length; i++)
+							{
+								var fontName = thisGraph.extFonts[i].name;
+								var fontUrl = thisGraph.extFonts[i].url;
+								
+								if (fontUrl.indexOf(Editor.GOOGLE_FONTS) == 0)
+								{
+							   		doc.writeln('<link rel="stylesheet" href="' + fontUrl + '" charset="UTF-8" type="text/css">');
+								}
+								else
+								{
+							   		doc.writeln('<style type="text/css">');
+							   		doc.writeln('@font-face {\n' +
+								            '\tfont-family: "'+ fontName +'";\n' + 
+								            '\tsrc: url("'+ fontUrl +'");\n' + 
+								            '}');
+							   		doc.writeln('</style>');
+								}
+							}
 						}
 					};
 					
@@ -4566,8 +5976,8 @@
 						pv.renderPage = function(w, h, dx, dy, content, pageNumber)
 						{
 							var prev = mxClient.NO_FO;
-							mxClient.NO_FO = (this.graph.mathEnabled && !this.useForeignObjectForMath) ?
-									true : this.originalNoForeignObject;
+							mxClient.NO_FO = (this.graph.mathEnabled && !editorUi.editor.useForeignObjectForMath) ?
+								true : editorUi.editor.originalNoForeignObject;
 							
 							var result = printPreviewRenderPage.apply(this, arguments);
 
@@ -4586,7 +5996,25 @@
 						};
 					}
 					
+					// Switches stylesheet for print output in dark mode
+					var temp = null;
+					
+					if (graph.themes != null && graph.defaultThemeName == 'darkTheme')
+					{
+						temp = graph.stylesheet;
+						graph.stylesheet = graph.getDefaultStylesheet()
+						graph.refresh();
+					}
+					
+					// Generates the print output
 					pv.open(null, null, forcePageBreaks, true);
+					
+					// Restores the stylesheet
+					if (temp != null)
+					{
+						graph.stylesheet = temp;
+						graph.refresh();
+					}
 				}
 				else
 				{				
@@ -4600,6 +6028,39 @@
 					pv.backgroundColor = bg;
 					pv.autoOrigin = autoOrigin;
 					pv.appendGraph(thisGraph, scale, x0, y0, forcePageBreaks, true);
+					
+					if (thisGraph.extFonts != null && pv.wnd != null)
+					{
+						for (var i = 0; i < thisGraph.extFonts.length; i++)
+						{
+							var fontName = thisGraph.extFonts[i].name;
+							var fontUrl = thisGraph.extFonts[i].url;
+							
+							if (fontUrl.indexOf(Editor.GOOGLE_FONTS) == 0)
+							{
+						   		pv.wnd.document.writeln('<link rel="stylesheet" href="' + fontUrl + '" charset="UTF-8" type="text/css">');
+							}
+							else
+							{
+						   		pv.wnd.document.writeln('<style type="text/css">');
+						   		pv.wnd.document.writeln('@font-face {\n' +
+							            '\tfont-family: "'+ fontName +'";\n' + 
+							            '\tsrc: url("'+ fontUrl +'");\n' + 
+							            '}');
+						   		pv.wnd.document.writeln('</style>');
+							}
+						}
+					}
+				}
+				
+				// Restores state if css transforms are used
+				if (prev)
+				{
+					thisGraph.useCssTransforms = prev;
+					thisGraph.currentTranslate = prevTranslate;
+					thisGraph.currentScale = prevScale;
+					thisGraph.view.translate = prevViewTranslate;
+					thisGraph.view.scale = prevViewScale;
 				}
 				
 				return pv;
@@ -4630,10 +6091,10 @@
 				{
 					var page = editorUi.pages[i];
 					var tempGraph = (page == editorUi.currentPage) ? graph : null;
-					
+
 					if (tempGraph == null)
 					{
-						tempGraph = editorUi.createTemporaryGraph(graph.getStylesheet());
+						tempGraph = editorUi.createTemporaryGraph(graph.stylesheet);//getStylesheet());
 
 						// Restores graph settings that are relevant for printing
 						var pageVisible = true;
@@ -4658,6 +6119,7 @@
 							mathEnabled = page.viewState.mathEnabled;
 							bg = page.viewState.background;
 							bgImage = page.viewState.backgroundImage;
+							tempGraph.extFonts = page.viewState.extFonts;
 						}
 					
 						tempGraph.background = bg;
@@ -4678,6 +6140,10 @@
 							{
 								return i + 1;
 							}
+							else if (name == 'pagecount')
+							{
+								return (editorUi.pages != null) ? editorUi.pages.length : 1;
+							}
 							
 							return graphGetGlobalVariable.apply(this, arguments);
 						};
@@ -4686,7 +6152,7 @@
 						editorUi.updatePageRoot(page);
 						tempGraph.model.setRoot(page.root);
 					}
-
+					
 					pv = printGraph(tempGraph, pv, i != imax);
 
 					if (tempGraph != graph)
@@ -4709,37 +6175,16 @@
 				if (pv.mathEnabled)
 				{
 					var doc = pv.wnd.document;
-			
-					doc.writeln('<script type="text/x-mathjax-config">');
-					doc.writeln('MathJax.Hub.Config({');
-					doc.writeln('showMathMenu: false,');
-					doc.writeln('messageStyle: "none",');
-					doc.writeln('jax: ["input/TeX", "input/MathML", "input/AsciiMath", "output/HTML-CSS"],');
-					doc.writeln('extensions: ["tex2jax.js", "mml2jax.js", "asciimath2jax.js"],');
-					doc.writeln('"HTML-CSS": {');
-					doc.writeln('imageFont: null');
-					doc.writeln('},');
-					doc.writeln('TeX: {');
-					doc.writeln('extensions: ["AMSmath.js", "AMSsymbols.js", "noErrors.js", "noUndefined.js"]');
-					doc.writeln('},');
-					doc.writeln('tex2jax: {');
-					doc.writeln('	ignoreClass: "geDisableMathJax"');
-				  	doc.writeln('},');
-				  	doc.writeln('asciimath2jax: {');
-					doc.writeln('	ignoreClass: "geDisableMathJax"');
-				  	doc.writeln('}');
-					doc.writeln('});');
 					
-					// Adds asynchronous printing when MathJax finished rendering
+					// Adds asynchronous printing when MathJax finishes rendering
+					// via global variable that is checked in math-print.js to
+					// avoid generating unsafe-inline script or adding SHA to CSP
 					if (print)
 					{
-						doc.writeln('MathJax.Hub.Queue(function () {');
-						doc.writeln('window.print();');
-						doc.writeln('});');
+						pv.wnd.IMMEDIATE_PRINT = true;
 					}
-					
-					doc.writeln('</script>');
-					doc.writeln('<script type="text/javascript" src="' + DRAW_MATH_URL + '/MathJax.js"></script>');
+
+					doc.writeln('<script type="text/javascript" src="' + DRAWIO_BASE_URL + '/js/math-print.js"></script>');
 				}
 				
 				pv.closeDocument();
@@ -4748,6 +6193,13 @@
 				{
 					PrintDialog.printPreview(pv);
 				}
+			}
+			
+			// Restores dark mode
+			if (darkStylesheet != null)
+			{
+				graph.stylesheet = darkStylesheet;
+				graph.refresh();
 			}
 		};
 		
@@ -4899,116 +6351,6 @@
 	}
 	
 })();
-
-/**
- * 
- */
-var ErrorDialog = function(editorUi, title, message, buttonText, fn, retry, buttonText2, fn2, hide, buttonText3, fn3)
-{
-	hide = (hide != null) ? hide : true;
-	
-	var div = document.createElement('div');
-	div.style.textAlign = 'center';
-
-	if (title != null)
-	{
-		var hd = document.createElement('div');
-		hd.style.padding = '0px';
-		hd.style.margin = '0px';
-		hd.style.fontSize = '18px';
-		hd.style.paddingBottom = '16px';
-		hd.style.marginBottom = '10px';
-		hd.style.borderBottom = '1px solid #c0c0c0';
-		hd.style.color = 'gray';
-		hd.style.whiteSpace = 'nowrap';
-		hd.style.textOverflow = 'ellipsis';
-		hd.style.overflow = 'hidden';
-		mxUtils.write(hd, title);
-		hd.setAttribute('title', title);
-		div.appendChild(hd);
-	}
-
-	var p2 = document.createElement('div');
-	p2.style.lineHeight = '1.2em';
-	p2.style.padding = '6px';
-	p2.innerHTML = message;
-	div.appendChild(p2);
-	
-	var btns = document.createElement('div');
-	btns.style.marginTop = '12px';
-	btns.style.textAlign = 'center';
-	
-	if (retry != null)
-	{
-		var retryBtn = mxUtils.button(mxResources.get('tryAgain'), function()
-		{
-			editorUi.hideDialog();
-			retry();
-		});
-		retryBtn.className = 'geBtn';
-		btns.appendChild(retryBtn);
-		
-		btns.style.textAlign = 'center';
-	}
-	
-	if (buttonText3 != null)
-	{
-		var btn3 = mxUtils.button(buttonText3, function()
-		{
-			if (fn3 != null)
-			{
-				fn3();
-			}
-		});
-		
-		btn3.className = 'geBtn';
-		btns.appendChild(btn3);
-	}
-	
-	var btn = mxUtils.button(buttonText, function()
-	{
-		if (hide)
-		{
-			editorUi.hideDialog();
-		}
-		
-		if (fn != null)
-		{
-			fn();
-		}
-	});
-	
-	btn.className = 'geBtn';
-	btns.appendChild(btn);
-
-	if (buttonText2 != null)
-	{
-		var mainBtn = mxUtils.button(buttonText2, function()
-		{
-			if (hide)
-			{
-				editorUi.hideDialog();
-			}
-			
-			if (fn2 != null)
-			{
-				fn2();
-			}
-		});
-		
-		mainBtn.className = 'geBtn gePrimaryBtn';
-		btns.appendChild(mainBtn);
-	}
-
-	this.init = function()
-	{
-		btn.focus();
-	};
-	
-	div.appendChild(btns);
-
-	this.container = div;
-};
 
 // Extends codec for ChangePageSetup
 (function()

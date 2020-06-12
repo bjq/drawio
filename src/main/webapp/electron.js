@@ -16,11 +16,15 @@ const {autoUpdater} = require("electron-updater")
 const Store = require('electron-store');
 const store = new Store();
 const ProgressBar = require('electron-progressbar');
+const { systemPreferences } = require('electron')
+const disableUpdate = require('./disableUpdate').disableUpdate() || 
+						process.env.DRAWIO_DISABLE_UPDATE === 'true' || 
+						fs.existsSync('/.flatpak-info'); //This file indicates running in flatpak sandbox
 autoUpdater.logger = log
 autoUpdater.logger.transports.file.level = 'info'
 autoUpdater.autoDownload = false
 
-const __DEV__ = process.env.NODE_ENV === 'development'
+const __DEV__ = process.env.DRAWIO_ENV === 'dev'
 		
 let windowsRegistry = []
 let cmdQPressed = false
@@ -37,7 +41,9 @@ function createWindow (opt = {})
 		'web-security': true,
 		webPreferences: {
 			// preload: path.resolve('./preload.js'),
-			nodeIntegration: true
+			nodeIntegration: true,
+			enableRemoteModule: true,
+			nodeIntegrationInWorker: true
 		}
 	}, opt)
 
@@ -56,17 +62,16 @@ function createWindow (opt = {})
 		query:
 		{
 			'dev': __DEV__ ? 1 : 0,
-			'drawdev': __DEV__ ? 1 : 0,
 			'test': __DEV__ ? 1 : 0,
-			'db': 0,
 			'gapi': 0,
+			'db': 0,
 			'od': 0,
 			'gh': 0,
+			'gl': 0,
 			'tr': 0,
-			'analytics': 0,
+			'browser': 0,
 			'picker': 0,
 			'mode': 'device',
-			'browser': 0,
 			'export': 'https://exp.draw.io/ImageExport4/export'
 		},
 		slashes: true
@@ -94,8 +99,8 @@ function createWindow (opt = {})
 
 		if (contents != null)
 		{
-			contents.executeJavaScript('if(typeof global.__emt_isModified === \'function\'){global.__emt_isModified()}', true,
-				isModified =>
+			contents.executeJavaScript('if(typeof global.__emt_isModified === \'function\'){global.__emt_isModified()}', true)
+				.then((isModified) =>
 				{
 					if (__DEV__) 
 					{
@@ -104,7 +109,7 @@ function createWindow (opt = {})
 					
 					if (isModified)
 					{
-						var choice = dialog.showMessageBox(
+						var choice = dialog.showMessageBoxSync(
 							win,
 							{
 								type: 'question',
@@ -185,47 +190,57 @@ app.on('ready', e =>
         argv.unshift(null)
     }
 
-	var validFormatRegExp = /^(pdf|svg|png|jpeg|jpg)$/;
+	var validFormatRegExp = /^(pdf|svg|png|jpeg|jpg|vsdx)$/;
 	
 	function argsRange(val) 
 	{
 	  return val.split('..').map(Number);
 	}
-
-	program
-        .version(app.getVersion())
-        .usage('[options] [input file/folder]')
-        .option('-c, --create', 'creates a new empty file if no file is passed')
-        .option('-x, --export', 'export the input file/folder based on the given options')
-        .option('-r, --recursive', 'for a folder input, recursively convert all files in sub-folders also')
-        .option('-o, --output <output file/folder>', 'specify the output file/folder. If omitted, the input file name is used for output with the specified format as extension')
-        .option('-f, --format <format>',
-		    'if output file name extension is specified, this option is ignored (file type is determined from output extension)',
-		    validFormatRegExp, 'pdf')
-		.option('-q, --quality <quality>',
-			'output image quality for JPEG (default: 90)', parseInt)
-		.option('-t, --transparent',
-			'set transparent background for PNG')
-		.option('-e, --embed-diagram',
-			'includes a copy of the diagram (for PNG format only)')
-		.option('-b, --border <border>',
-			'sets the border width around the diagram (default: 0)', parseInt)
-		.option('-s, --scale <scale>',
-			'scales the diagram size', parseFloat)
-		.option('-w, --width <width>',
-			'fits the generated image/pdf into the specified width, preserves aspect ratio.', parseInt)
-		.option('-h, --height <height>',
-			'fits the generated image/pdf into the specified height, preserves aspect ratio.', parseInt)
-		.option('--crop',
-			'crops PDF to diagram size')
-		.option('-a, --all-pages',
-			'export all pages (for PDF format only)')
-		.option('-p, --page-index <pageIndex>',
-			'selects a specific page, if not specified and the format is an image, the first page is selected', parseInt)
-		.option('-g, --page-range <from>..<to>',
-			'selects a page range (for PDF format only)', argsRange)
-        .parse(argv)
-
+	
+	try
+	{
+		program
+	        .version(app.getVersion())
+	        .usage('[options] [input file/folder]')
+	        .allowUnknownOption() //-h and --help are considered unknown!!
+	        .option('-c, --create', 'creates a new empty file if no file is passed')
+	        .option('-k, --check', 'does not overwrite existing files')
+	        .option('-x, --export', 'export the input file/folder based on the given options')
+	        .option('-r, --recursive', 'for a folder input, recursively convert all files in sub-folders also')
+	        .option('-o, --output <output file/folder>', 'specify the output file/folder. If omitted, the input file name is used for output with the specified format as extension')
+	        .option('-f, --format <format>',
+			    'if output file name extension is specified, this option is ignored (file type is determined from output extension, possible export formats are pdf, png, jpg, svg, vsdx)',
+			    validFormatRegExp, 'pdf')
+			.option('-q, --quality <quality>',
+				'output image quality for JPEG (default: 90)', parseInt)
+			.option('-t, --transparent',
+				'set transparent background for PNG')
+			.option('-e, --embed-diagram',
+				'includes a copy of the diagram (for PNG format only)')
+			.option('-b, --border <border>',
+				'sets the border width around the diagram (default: 0)', parseInt)
+			.option('-s, --scale <scale>',
+				'scales the diagram size', parseFloat)
+			.option('--width <width>',
+				'fits the generated image/pdf into the specified width, preserves aspect ratio.', parseInt)
+			.option('--height <height>',
+				'fits the generated image/pdf into the specified height, preserves aspect ratio.', parseInt)
+			.option('--crop',
+				'crops PDF to diagram size')
+			.option('-a, --all-pages',
+				'export all pages (for PDF format only)')
+			.option('-p, --page-index <pageIndex>',
+				'selects a specific page, if not specified and the format is an image, the first page is selected', parseInt)
+			.option('-g, --page-range <from>..<to>',
+				'selects a page range (for PDF format only)', argsRange)
+	        .parse(argv)
+	}
+	catch(e)
+	{
+		//On parse error, return [exit and commander will show the error message]
+		return;
+	}
+	
     //Start export mode?
     if (program.export)
 	{
@@ -325,8 +340,8 @@ app.on('ready', e =>
 					{
 						var filePath = path.join(dir, file);
 						stat = fs.statSync(filePath);
-					    
-						if (stat.isFile())
+						
+						if (stat.isFile() && path.basename(filePath).charAt(0) != '.')
 						{
 							files.push(filePath);
 						}
@@ -356,7 +371,14 @@ app.on('ready', e =>
 						
 						try
 						{
-							expArgs.xml = fs.readFileSync(curFile, 'utf-8');
+							var ext = path.extname(curFile);
+							
+							expArgs.xml = fs.readFileSync(curFile, ext === '.png'? null : 'utf-8');
+							
+							if (ext === '.png')
+							{
+								expArgs.xml = Buffer.from(expArgs.xml).toString('base64');
+							}
 							
 							var mockEvent = {
 								reply: function(msg, data)
@@ -375,7 +397,7 @@ app.on('ready', e =>
 											{
 												if (outType.isDir)
 												{
-													outFileName = path.join(program.output, path.basename(curFile, path.extname(curFile))) + '.' + format;
+													outFileName = path.join(program.output, path.basename(curFile)) + '.' + format;
 												}
 												else
 												{
@@ -384,16 +406,32 @@ app.on('ready', e =>
 											}
 											else if (inStat.isFile())
 											{
-												outFileName = path.join(path.dirname(paths[0]), path.basename(paths[0], path.extname(paths[0]))) + '.' + format;
+												outFileName = path.join(path.dirname(paths[0]), path.basename(paths[0],
+													path.extname(paths[0]))) + '.' + format;
+												
 											}
 											else //dir
 											{
-												outFileName = path.join(path.dirname(curFile), path.basename(curFile, path.extname(curFile))) + '.' + format;
+												outFileName = path.join(path.dirname(curFile), path.basename(curFile,
+													path.extname(curFile))) + '.' + format;
 											}
 											
 											try
 											{
-												fs.writeFileSync(outFileName, data, { flag: 'wx' });
+												var counter = 0;
+												var realFileName = outFileName;
+												
+												if (program.rawArgs.indexOf('-k') > -1 || program.rawArgs.indexOf('--check') > -1)
+												{
+													while (fs.existsSync(realFileName))
+													{
+														counter++;
+														realFileName = path.join(path.dirname(outFileName), path.basename(outFileName,
+															path.extname(outFileName))) + '-' + counter + path.extname(outFileName);
+													}
+												}
+												
+												fs.writeFileSync(realFileName, data, format == 'vsdx'? 'base64' : null, { flag: 'wx' });
 												console.log(curFile + ' -> ' + outFileName);
 											}
 											catch(e)
@@ -467,7 +505,43 @@ app.on('ready', e =>
     	
     	return;
 	}
+    else if (program.rawArgs.indexOf('-h') > -1 || program.rawArgs.indexOf('--help') > -1 || program.rawArgs.indexOf('-V') > -1 || program.rawArgs.indexOf('--version') > -1) //To prevent execution when help/version arg is used
+	{
+    	return;
+	}
     
+    //Prevent multiple instances of the application (casuses issues with configuration)
+    const gotTheLock = app.requestSingleInstanceLock()
+
+    if (!gotTheLock) 
+    {
+    	app.quit()
+    } 
+    else 
+    {
+    	app.on('second-instance', (event, commandLine, workingDirectory) => {
+    		//Create another window
+    		let win = createWindow()
+    	    
+    	    win.webContents.on('did-finish-load', function()
+    	    {
+    	    	ipcMain.once('app-load-finished', (evt, data) =>
+    			{
+	    	    	//Open the file if new app request is from opening a file
+	    	    	var potFile = commandLine.pop();
+	    	    	
+	    	    	if (fs.existsSync(potFile))
+	    	    	{
+	    	    		win.webContents.send('args-obj', {args: [potFile]});
+	    	    	}
+    			});
+    			
+    	        win.webContents.zoomFactor = 1;
+    	        win.webContents.setVisualZoomLevelLimits(1, 1);
+    	    });
+    	})
+    }
+
     let win = createWindow()
     
     win.webContents.on('did-finish-load', function()
@@ -486,11 +560,14 @@ app.on('ready', e =>
     	
     	firstWinLoaded = true;
     	
-        win.webContents.send('args-obj', program);
-        
-        win.webContents.setZoomFactor(1);
+    	ipcMain.once('app-load-finished', (evt, data) =>
+		{
+			//Sending entire program is not allowed in Electron 9 as it is not native JS object
+			win.webContents.send('args-obj', {args: program.args, create: program.create});
+		});
+    	
+        win.webContents.zoomFactor = 1;
         win.webContents.setVisualZoomLevelLimits(1, 1);
-        win.webContents.setLayoutZoomLevelLimits(0, 0);
     });
 	
     let updateNoAvailAdded = false;
@@ -518,7 +595,7 @@ app.on('ready', e =>
 	}
 
 	let template = [{
-	    label: app.getName(),
+	    label: app.name,
 	    submenu: [
 	      {
 	        label: 'Website',
@@ -542,13 +619,18 @@ app.on('ready', e =>
 	      }]
 	}]
 	
+	if (disableUpdate)
+	{
+		template[0].submenu.splice(2, 1);
+	}
+	
 	if (process.platform === 'darwin')
 	{
 	    template = [{
-	      label: app.getName(),
+	      label: app.name,
 	      submenu: [
 	        {
-	          label: 'About ' + app.getName(),
+	          label: 'About ' + app.name,
 	          click() { shell.openExternal('https://about.draw.io'); }
 	        },
 	        {
@@ -565,20 +647,22 @@ app.on('ready', e =>
 	      ]
 	    }, {
 	      label: 'Edit',
-	      submenu: [{
-	        label: 'Cut',
-	        accelerator: 'CmdOrCtrl+X',
-	        selector: 'cut:'
-	      }, {
-	        label: 'Copy',
-	        accelerator: 'CmdOrCtrl+C',
-	        selector: 'copy:'
-	      }, {
-	        label: 'Paste',
-	        accelerator: 'CmdOrCtrl+V',
-	        selector: 'paste:'
-	      }]
+	      submenu: [
+			{ role: 'undo' },
+			{ role: 'redo' },
+			{ type: 'separator' },
+			{ role: 'cut' },
+			{ role: 'copy' },
+			{ role: 'paste' },
+			{ role: 'pasteAndMatchStyle' },
+			{ role: 'selectAll' }
+	      ]
 	    }]
+	    
+	    if (disableUpdate)
+		{
+			template[0].submenu.splice(2, 1);
+		}
 	}
 	
 	const menuBar = menu.buildFromTemplate(template)
@@ -590,7 +674,7 @@ app.on('ready', e =>
 		owner: 'jgraph'
 	})
 	
-	if (!store.get('dontCheckUpdates'))
+	if (!disableUpdate && !store.get('dontCheckUpdates'))
 	{
 		autoUpdater.checkForUpdates()
 	}
@@ -640,18 +724,20 @@ app.on('will-finish-launching', function()
 	app.on("open-file", function(event, path) 
 	{
 	    event.preventDefault();
-	    
+
 	    if (firstWinLoaded)
 	    {
 		    let win = createWindow();
 		    
 		    win.webContents.on('did-finish-load', function()
 		    {
-		        win.webContents.send('args-obj', {args: [path]});
-		        
-		        win.webContents.setZoomFactor(1);
+		    	ipcMain.once('app-load-finished', (evt, data) =>
+		    	{
+		    		win.webContents.send('args-obj', {args: [path]});
+		    	});
+		    	
+		        win.webContents.zoomFactor = 1;
 		        win.webContents.setVisualZoomLevelLimits(1, 1);
-		        win.webContents.setLayoutZoomLevelLimits(0, 0);
 		    });
 	    }
 	    else
@@ -674,9 +760,9 @@ autoUpdater.on('update-available', (a, b) =>
 		title: 'Confirm Update',
 		message: 'Update available.\n\nWould you like to download and install new version?',
 		detail: 'Application will automatically restart to apply update after download',
-	}, response =>
+	}).then( result =>
 	{
-		if (response === 0)
+		if (result.response === 0)
 		{
 			autoUpdater.downloadUpdate()
 			
@@ -767,18 +853,18 @@ autoUpdater.on('update-available', (a, b) =>
 					type: 'question',
 					buttons: ['Install', 'Later'],
 					defaultId: 0,
-					message: 'A new version of ' + app.getName() + ' has been downloaded',
+					message: 'A new version of ' + app.name + ' has been downloaded',
 					detail: 'It will be installed the next time you restart the application',
-				}, response =>
+				}).then(result =>
 				{
-					if (response === 0)
+					if (result.response === 0)
 					{
 						setTimeout(() => autoUpdater.quitAndInstall(), 1)
 					}
 				})
 		    });
 		}
-		else if (response === 2)
+		else if (result.response === 2)
 		{
 			//save in settings don't check for updates
 			log.info('@dont check for updates!@')
@@ -795,10 +881,11 @@ const LARGE_IMAGE_AREA = 30000000;
 //NOTE: Key length must not be longer than 79 bytes (not checked)
 function writePngWithText(origBuff, key, text, compressed, base64encoded)
 {
+	var isDpi = key == 'dpi';
 	var inOffset = 0;
 	var outOffset = 0;
 	var data = text;
-	var dataLen = key.length + data.length + 1; //we add 1 zeros with non-compressed data
+	var dataLen = isDpi? 9 : key.length + data.length + 1; //we add 1 zeros with non-compressed data, for pHYs it's 2 of 4-byte-int + 1 byte
 	
 	//prepare compressed data to get its size
 	if (compressed)
@@ -807,7 +894,7 @@ function writePngWithText(origBuff, key, text, compressed, base64encoded)
 		dataLen = key.length + data.length + 2; //we add 2 zeros with compressed data
 	}
 	
-	var outBuff = Buffer.allocUnsafe(origBuff.length + dataLen + 4); //4 is the header size "zTXt" or "tEXt"
+	var outBuff = Buffer.allocUnsafe(origBuff.length + dataLen + 4); //4 is the header size "zTXt", "tEXt" or "pHYs"
 	
 	try
 	{
@@ -847,30 +934,49 @@ function writePngWithText(origBuff, key, text, compressed, base64encoded)
 				outBuff.writeInt32BE(dataLen, outOffset);
 				outOffset += 4;
 				
-				var typeSignature = (compressed) ? "zTXt" : "tEXt";
+				var typeSignature = isDpi? 'pHYs' : (compressed ? "zTXt" : "tEXt");
 				outBuff.write(typeSignature, outOffset);
 				
 				outOffset += 4;
-				outBuff.write(key, outOffset);
-				outOffset += key.length;
-				outBuff.writeInt8(0, outOffset);
-				outOffset ++;
 
-				if (compressed)
+				if (isDpi)
 				{
-					outBuff.writeInt8(0, outOffset);
-					outOffset ++;
-					data.copy(outBuff, outOffset);
+					var dpm = Math.round(parseInt(text) / 0.0254) || 3937; //One inch is equal to exactly 0.0254 meters. 3937 is 100dpi
+
+					outBuff.writeInt32BE(dpm, outOffset);
+					outBuff.writeInt32BE(dpm, outOffset + 4);
+					outBuff.writeInt8(1, outOffset + 8);
+					outOffset += 9;
+
+					data = Buffer.allocUnsafe(9);
+					data.writeInt32BE(dpm, 0);
+					data.writeInt32BE(dpm, 4);
+					data.writeInt8(1, 8);
 				}
 				else
 				{
-					outBuff.write(data, outOffset);	
-				}
-				
-				outOffset += data.length;				
+					outBuff.write(key, outOffset);
+					outOffset += key.length;
+					outBuff.writeInt8(0, outOffset);
+					outOffset ++;
 
-				var crcVal = crc.crc32(typeSignature);
-				crc.crc32(data, crcVal);
+					if (compressed)
+					{
+						outBuff.writeInt8(0, outOffset);
+						outOffset ++;
+						data.copy(outBuff, outOffset);
+					}
+					else
+					{
+						outBuff.write(data, outOffset);	
+					}
+
+					outOffset += data.length;				
+				}
+
+				var crcVal = 0xffffffff;
+				crcVal = crc.crcjam(typeSignature, crcVal);
+				crcVal = crc.crcjam(data, crcVal);
 
 				// CRC
 				outBuff.writeInt32BE(crcVal ^ 0xffffffff, outOffset);
@@ -906,9 +1012,66 @@ function writePngWithText(origBuff, key, text, compressed, base64encoded)
 	}
 }
 
+//TODO Create a lightweight html file similar to export3.html for exporting to vsdx
+function exportVsdx(event, args, directFinalize)
+{
+	let win = createWindow({
+		show : false
+	});
+
+    win.webContents.on('did-finish-load', function()
+    {
+    	ipcMain.once('app-load-finished', (evt, data) =>
+		{
+	    	win.webContents.send('export-vsdx', args);
+	    	
+	        ipcMain.once('export-vsdx-finished', (evt, data) =>
+			{
+				var hasError = false;
+				
+				if (data == null)
+				{
+					hasError = true;
+				}
+				
+				//Set finalize here since it is call in the reply below
+				function finalize()
+				{
+					win.destroy();
+				};
+				
+				if (directFinalize === true)
+				{
+					event.finalize = finalize;
+				}
+				else
+				{
+					//Destroy the window after response being received by caller
+					ipcMain.once('export-finalize', finalize);
+				}
+				
+				if (hasError)
+				{
+					event.reply('export-error');
+				}
+				else
+				{
+					event.reply('export-success', data);
+				}
+			});
+		});
+    });
+};
+
 //TODO Use canvas to export images if math is not used to speedup export (no capturePage). Requires change to export3.html also
 function exportDiagram(event, args, directFinalize)
 {
+	if (args.format == 'vsdx')
+	{
+		exportVsdx(event, args, directFinalize);
+		return;
+	}
+	
 	var browser = null;
 	
 	try
@@ -931,23 +1094,10 @@ function exportDiagram(event, args, directFinalize)
 
 		contents.on('did-finish-load', function()
 	    {
-			contents.send('render', {
-				xml: args.xml,
-				format: args.format,
-				w: args.w,
-				h: args.h,
-				border: args.border || 0,
-				bg: args.bg,
-				"from": args["from"],
-				to: args.to,
-				pageId: args.pageId,
-				allPages: args.allPages,
-				scale: args.scale || 1,
-				extras: args.extras
-			});
-			
 			ipcMain.once('render-finished', (evt, bounds) =>
 			{
+				//For some reason, Electron 9 doesn't send this object as is without stringifying. Usually when variable is external to function own scope
+				bounds = JSON.parse(bounds.bounds);
 				var pdfOptions = {pageSize: 'A4'};
 				var hasError = false;
 				
@@ -1001,7 +1151,8 @@ function exportDiagram(event, args, directFinalize)
 				}
 				else if (args.format == 'png' || args.format == 'jpg' || args.format == 'jpeg')
 				{
-					var newBounds = {width: Math.ceil(bounds.width + bounds.x), height: Math.ceil(bounds.height + bounds.y)};
+					//Adds an extra pixel to prevent scrollbars from showing
+					var newBounds = {width: Math.ceil(bounds.width + bounds.x) + 1, height: Math.ceil(bounds.height + bounds.y) + 1};
 					browser.setBounds(newBounds);
 					
 					//TODO The browser takes sometime to show the graph (also after resize it takes some time to render)
@@ -1014,6 +1165,11 @@ function exportDiagram(event, args, directFinalize)
 							img = img.resize(newBounds);
 
 							var data = args.format == 'png'? img.toPNG() : img.toJPEG(args.jpegQuality || 90);
+							
+							if (args.dpi != null && args.format == 'png')
+							{
+								data = writePngWithText(data, 'dpi', args.dpi);
+							}
 							
 							if (args.embedXml == "1" && args.format == 'png')
 							{
@@ -1034,16 +1190,13 @@ function exportDiagram(event, args, directFinalize)
 				}
 				else if (args.format == 'pdf')
 				{
-					contents.printToPDF(pdfOptions, (error, data) => 
+					contents.printToPDF(pdfOptions).then((data) => 
 					{
-						if (error)
-						{
-							event.reply('export-error', error);
-						}
-						else
-						{
-							event.reply('export-success', data);
-						}
+						event.reply('export-success', data);
+					})
+					.catch((error) => 
+					{
+						event.reply('export-error', error);
 					});
 				}
 				else if (args.format == 'svg')
@@ -1059,6 +1212,21 @@ function exportDiagram(event, args, directFinalize)
 				{
 					event.reply('export-error', 'Error: Unsupported format');
 				}
+			});
+
+			contents.send('render', {
+				xml: args.xml,
+				format: args.format,
+				w: args.w,
+				h: args.h,
+				border: args.border || 0,
+				bg: args.bg,
+				"from": args["from"],
+				to: args.to,
+				pageId: args.pageId,
+				allPages: args.allPages,
+				scale: args.scale || 1,
+				extras: args.extras
 			});
 	    });
 	}

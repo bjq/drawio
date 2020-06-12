@@ -7,6 +7,7 @@ GitHubFile = function(ui, data, meta)
 	DrawioFile.call(this, ui, data);
 	
 	this.meta = meta;
+	this.peer = this.ui.gitHub;
 };
 
 //Extends mxEventSource
@@ -113,7 +114,18 @@ GitHubFile.prototype.isRenamable = function()
  */
 GitHubFile.prototype.getLatestVersion = function(success, error)
 {
-	this.ui.gitHub.getFile(this.getId(), success, error);
+	this.peer.getFile(this.getId(), success, error);
+};
+
+/**
+ * Translates this point by the given vector.
+ * 
+ * @param {number} dx X-coordinate of the translation.
+ * @param {number} dy Y-coordinate of the translation.
+ */
+GitHubFile.prototype.isCompressedStorage = function()
+{
+	return false;
 };
 
 /**
@@ -181,10 +193,12 @@ GitHubFile.prototype.doSave = function(title, success, error, unloading, overwri
 	// Forces update of data for new extensions
 	var prev = this.meta.name;
 	this.meta.name = title;
-	DrawioFile.prototype.save.apply(this, arguments);
-	this.meta.name = prev;
 	
-	this.saveFile(title, false, success, error, unloading, overwrite, message);
+	DrawioFile.prototype.save.apply(this, [null, mxUtils.bind(this, function()
+	{
+		this.meta.name = prev;
+		this.saveFile(title, false, success, error, unloading, overwrite, message);
+	}), error, unloading, overwrite]);
 };
 
 /**
@@ -208,87 +222,115 @@ GitHubFile.prototype.saveFile = function(title, revision, success, error, unload
 		{
 			if (this.getTitle() == title)
 			{
-				var savedEtag = this.getCurrentEtag();
-				var savedData = this.data;
-
-				// Makes sure no changes get lost while the file is saved
-				var prevModified = this.isModified;
-				var modified = this.isModified();
-				this.savingFile = true;
-					
-				var prepare = mxUtils.bind(this, function()
-				{
-					this.setModified(false);
-					
-					this.isModified = function()
-					{
-						return modified;
-					};
-				});
+				var prevModified = null;
+				var modified = null;
 				
-				prepare();
-				
-				this.ui.gitHub.saveFile(this, mxUtils.bind(this, function(commit)
+				try
 				{
-					this.isModified = prevModified;
-					this.savingFile = false;
+					// Makes sure no changes get lost while the file is saved
+					prevModified = this.isModified;
+					modified = this.isModified();
+					this.savingFile = true;
+					this.savingFileTime = new Date();
+						
+					// Makes sure no changes get lost while the file is saved
+					var prepare = mxUtils.bind(this, function()
+					{
+						this.setModified(false);
+						
+						this.isModified = function()
+						{
+							return modified;
+						};
+					});
 					
-					this.meta.sha = commit.content.sha;
-					this.meta.html_url = commit.content.html_url;
-					this.meta.download_url = commit.content.download_url;
+					var savedEtag = this.getCurrentEtag();
+					var savedData = this.data;
+					prepare();
 
-					this.fileSaved(savedData, savedEtag, mxUtils.bind(this, function()
+					this.peer.saveFile(this, mxUtils.bind(this, function(etag)
 					{
-						this.contentChanged();
+						this.savingFile = false;
+						this.isModified = prevModified;
+						this.setDescriptorEtag(this.meta, etag);
 						
-						if (success != null)
+						this.fileSaved(savedData, savedEtag, mxUtils.bind(this, function()
 						{
-							success();
-						}
-					}), error);
-				}),
-				mxUtils.bind(this, function(err)
-				{
-					this.savingFile = false;
-					this.isModified = prevModified;
-					this.setModified(modified || this.isModified());
-
-					if (this.isConflict(err))
-					{
-						this.inConflictState = true;
-						
-						if (error != null)
-						{
-							// Passes current commit message to avoid
-							// multiple dialogs after synchronize
-							error({commitMessage: message});
-						}
-					}
-					else if (error != null)
-					{
-						// Handles modified state for retries
-						if (err != null && err.retry != null)
-						{
-							var retry = err.retry;
+							this.contentChanged();
 							
-							err.retry = function()
+							if (success != null)
 							{
-								prepare();
-								retry();
-							};
+								success();
+							}
+						}), error);
+					}),
+					mxUtils.bind(this, function(err)
+					{
+						this.savingFile = false;
+						this.isModified = prevModified;
+						this.setModified(modified || this.isModified());
+	
+						if (this.isConflict(err))
+						{
+							this.inConflictState = true;
+							
+							if (error != null)
+							{
+								// Passes current commit message to avoid
+								// multiple dialogs after synchronize
+								error({commitMessage: message});
+							}
 						}
-						
-						error(err);
+						else if (error != null)
+						{
+							// Handles modified state for retries
+							if (err != null && err.retry != null)
+							{
+								var retry = err.retry;
+								
+								err.retry = function()
+								{
+									prepare();
+									retry();
+								};
+							}
+							
+							error(err);
+						}
+					}), overwrite, message);
+				}
+				catch (e)
+				{
+					this.savingFile = false;
+					
+					if (prevModified != null)
+					{
+						this.isModified = prevModified;
 					}
-				}), overwrite, message);
+					
+					if (modified != null)
+					{
+						this.setModified(modified || this.isModified());
+					}
+					
+					if (error != null)
+					{
+						error(e);
+					}
+					else
+					{
+						throw e;
+					}
+				}
 			}
 			else
 			{
 				this.savingFile = true;
+				this.savingFileTime = new Date();
 				
-				this.ui.pickFolder(App.MODE_GITHUB, mxUtils.bind(this, function(folderId)
+				this.ui.pickFolder(this.getMode(), mxUtils.bind(this, function(folderId)
 				{
-					this.ui.gitHub.insertFile(title, this.getData(), mxUtils.bind(this, function(file)
+					this.peer.insertFile(title, this.getData(), mxUtils.bind(this, function(file)
 					{
 						this.savingFile = false;
 						
@@ -317,8 +359,9 @@ GitHubFile.prototype.saveFile = function(title, revision, success, error, unload
 		}
 		else
 		{
-			this.ui.gitHub.showCommitDialog(this.meta.name, this.meta.sha == null || this.meta.isNew,
-				mxUtils.bind(this, function(message)
+			this.peer.showCommitDialog(this.meta.name,
+				this.getDescriptorEtag(this.meta) == null ||
+				this.meta.isNew, mxUtils.bind(this, function(message)
 			{
 				doSave(message);	
 			}), error);

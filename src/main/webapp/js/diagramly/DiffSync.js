@@ -26,7 +26,7 @@ EditorUi.prototype.codec = new mxCodec();
  * Contains all view state properties that should not be ignored in diff sync.
  */
 EditorUi.prototype.viewStateProperties = {background: true, backgroundImage: true, shadowVisible: true,
-	foldingEnabled: true, pageScale: true, mathEnabled: true, pageFormat: true};
+	foldingEnabled: true, pageScale: true, mathEnabled: true, pageFormat: true, extFonts: true};
 
 /**
  * Contains all known cell properties that should be ignored for a generic cell diff.
@@ -232,7 +232,7 @@ EditorUi.prototype.patchViewState = function(page, diff)
 		
 		if (page == this.currentPage)
 		{
-			this.editor.graph.setViewState(page.viewState);
+			this.editor.graph.setViewState(page.viewState, true);
 		}
 	}
 };
@@ -627,7 +627,7 @@ EditorUi.prototype.patchCell = function(model, cell, diff, resolve)
  */
 EditorUi.prototype.getPagesForNode = function(node, nodeName)
 {
-	var tmp = this.editor.extractGraphModel(node, true);
+	var tmp = this.editor.extractGraphModel(node, true, true);
 	
 	if (tmp != null)
 	{
@@ -642,7 +642,7 @@ EditorUi.prototype.getPagesForNode = function(node, nodeName)
 		for (var i = 0; i < diagrams.length; i++)
 		{
 			var page = new DiagramPage(diagrams[i]);
-			this.updatePageRoot(page);
+			this.updatePageRoot(page, true);
 			pages.push(page);
 		}
 	}
@@ -651,7 +651,7 @@ EditorUi.prototype.getPagesForNode = function(node, nodeName)
 		var graph = this.editor.graph;
 		var page = new DiagramPage(node.ownerDocument.createElement('diagram'));
 		page.setName(mxResources.get('pageWithNumber', [1]));
-		mxUtils.setTextContent(page.node, Graph.compressNode(node));
+		mxUtils.setTextContent(page.node, Graph.compressNode(node, true));
 		pages.push(page);
 	}
 	

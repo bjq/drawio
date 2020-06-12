@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) 2006-2020, JGraph Ltd
+ * Copyright (c) 2006-2020, draw.io AG
+ */
+
 // urlParams is null when used for embedding
 window.urlParams = window.urlParams || {};
 
@@ -8,31 +13,41 @@ window.isLocalStorage = window.isLocalStorage || false;
 window.mxLoadSettings = window.mxLoadSettings || urlParams['configure'] != '1';
 
 // Checks for SVG support
-window.isSvgBrowser = window.isSvgBrowser || (navigator.userAgent.indexOf('MSIE') < 0 || document.documentMode >= 9);
+window.isSvgBrowser = window.isSvgBrowser || navigator.userAgent == null ||
+	navigator.userAgent.indexOf('MSIE') < 0 || document.documentMode >= 9;
 
 // CUSTOM_PARAMETERS - URLs for save and export
+window.DRAWIO_BASE_URL = window.DRAWIO_BASE_URL || ((/.*\.draw\.io$/.test(window.location.hostname)) ?
+	window.location.protocol + '//' + window.location.hostname : 'https://app.diagrams.net');
 window.EXPORT_URL = window.EXPORT_URL || 'https://exp.draw.io/ImageExport4/export';
-window.PLANT_URL = window.PLANT_URL || 'https://exp-plant.draw.io/plantuml4';
-window.DRAW_MATH_URL = window.DRAW_MATH_URL || 'https://www.draw.io/math';
-window.VSD_CONVERT_URL = window.VSD_CONVERT_URL || "https://convert.draw.io/VsdConverter/api/converter";
-window.EMF_CONVERT_URL = window.EMF_CONVERT_URL || "https://convert.draw.io/emf2png/convertEMF";
+window.PLANT_URL = window.PLANT_URL || 'https://plant-aws.diagrams.net';
+window.DRAW_MATH_URL = window.DRAW_MATH_URL || window.DRAWIO_BASE_URL + '/math';
+window.VSD_CONVERT_URL = window.VSD_CONVERT_URL || 'https://convert.draw.io/VsdConverter/api/converter';
+window.EMF_CONVERT_URL = window.EMF_CONVERT_URL || 'https://convert.draw.io/emf2png/convertEMF';
+window.REALTIME_URL = window.REALTIME_URL || 'cache';
+window.DRAWIO_GITLAB_URL = window.DRAWIO_GITLAB_URL || 'https://gitlab.com';
+window.DRAWIO_GITLAB_ID = window.DRAWIO_GITLAB_ID || '5cdc018a32acddf6eba37592d9374945241e644b8368af847422d74c8709bc44';
 window.SAVE_URL = window.SAVE_URL || 'save';
-window.OPEN_URL = window.OPEN_URL || 'open';
+window.OPEN_URL = window.OPEN_URL || 'import';
 window.PROXY_URL = window.PROXY_URL || 'proxy';
-window.VIEWER_URL = null;
+window.DRAWIO_VIEWER_URL = window.DRAWIO_VIEWER_URL || null;
 
 // Paths and files
 window.SHAPES_PATH = window.SHAPES_PATH || 'shapes';
 // Path for images inside the diagram
 window.GRAPH_IMAGE_PATH = window.GRAPH_IMAGE_PATH || 'img';
-window.ICONSEARCH_PATH = window.ICONSEARCH_PATH || ((navigator.userAgent.indexOf('MSIE') >= 0 ||
-	urlParams['dev']) && window.location.protocol != 'file:' ? 'iconSearch' : 'https://www.draw.io/iconSearch');
+window.ICONSEARCH_PATH = window.ICONSEARCH_PATH || (((navigator.userAgent != null && navigator.userAgent.indexOf('MSIE') >= 0) ||
+	urlParams['dev']) && window.location.protocol != 'file:' ? 'iconSearch' : window.DRAWIO_BASE_URL + '/iconSearch');
 window.TEMPLATE_PATH = window.TEMPLATE_PATH || 'templates';
 window.NEW_DIAGRAM_CATS_PATH = window.NEW_DIAGRAM_CATS_PATH || 'newDiagramCats';
+window.PLUGINS_BASE_PATH = window.PLUGINS_BASE_PATH || '';
 
 // Directory for i18 files and basename for main i18n file
 window.RESOURCES_PATH = window.RESOURCES_PATH || 'resources';
 window.RESOURCE_BASE = window.RESOURCE_BASE || RESOURCES_PATH + '/dia';
+
+// Specifies global configuration via variable
+window.DRAWIO_CONFIG = window.DRAWIO_CONFIG || null;
 
 // Sets the base path, the UI language via URL param and configures the
 // supported languages to avoid 404s. The loading of all core language
@@ -44,7 +59,7 @@ window.RESOURCE_BASE = window.RESOURCE_BASE || RESOURCES_PATH + '/dia';
 window.mxLoadResources = window.mxLoadResources || false;
 window.mxLanguage = window.mxLanguage || (function() 
 {
-	var lang = (urlParams['offline'] == '1') ? 'en' : urlParams['lang'];
+	var lang = urlParams['lang'];
 	
 	// Known issue: No JSON object at this point in quirks in IE8
 	if (lang == null && typeof(JSON) != 'undefined')
@@ -89,8 +104,10 @@ window.mxLanguageMap = window.mxLanguageMap ||
 	'et' : 'Eesti',
 	'en' : 'English',
 	'es' : 'Español',
+	'eu' : 'Euskadi',
 	'fil' : 'Filipino',
 	'fr' : 'Français',
+	'gl' : 'Galego',
 	'it' : 'Italiano',
 	'hu' : 'Magyar',
 	'nl' : 'Nederlands',
@@ -249,6 +266,28 @@ function setCurrentXml(data, filename)
 		EXPORT_URL = ex;
 	}
 
+	// Customizes gitlab URL
+	var glUrl = urlParams['gitlab'];
+
+	if (glUrl != null)
+	{
+		glUrl = decodeURIComponent(glUrl);
+		
+		if (glUrl.substring(0, 7) != 'http://' &&  glUrl.substring(0, 8) != 'https://')
+		{
+			glUrl = 'http://' + glUrl;
+		}
+		
+		DRAWIO_GITLAB_URL = glUrl;
+	}
+	
+	var glId = urlParams['gitlab-id'];
+
+	if (glId != null)
+	{
+		DRAWIO_GITLAB_ID = glId;
+	}
+
 	// URL for logging
 	window.DRAWIO_LOG_URL = window.DRAWIO_LOG_URL || '';
 
@@ -257,13 +296,25 @@ function setCurrentXml(data, filename)
 	
 	if (host != 'test.draw.io')
 	{
-		var searchString = 'draw.io';
+		var searchString = 'diagrams.net';
 		var position = host.length - searchString.length;
 		var lastIndex = host.lastIndexOf(searchString, position);
 		
 		if (lastIndex !== -1 && lastIndex === position)
 		{
-			window.DRAWIO_LOG_URL = 'https://log.draw.io';
+			window.DRAWIO_LOG_URL = 'https://log.diagrams.net';
+		}
+		else
+		{
+			// For atlas integrations
+			var searchString = 'draw.io';
+			var position = host.length - searchString.length;
+			var lastIndex = host.lastIndexOf(searchString, position);
+			
+			if (lastIndex !== -1 && lastIndex === position)
+			{
+				window.DRAWIO_LOG_URL = 'https://log.draw.io';
+			}
 		}
 	}
 })();
@@ -276,6 +327,7 @@ if (urlParams['offline'] == '1' || urlParams['demo'] == '1' || urlParams['stealt
 	urlParams['db'] = '0';
 	urlParams['od'] = '0';
 	urlParams['gh'] = '0';
+	urlParams['gl'] = '0';
 	urlParams['tr'] = '0';
 }
 

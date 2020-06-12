@@ -17,11 +17,40 @@
 		// Default tags
 		var dt = 'er entity relation ';
 		
+		function createEdge(style, m, n)
+		{
+			var edge = new mxCell('', new mxGeometry(0, 0, 0, 0), style);
+			edge.geometry.setTerminalPoint(new mxPoint(0, 0), true);
+			edge.geometry.setTerminalPoint(new mxPoint(160, 0), false);
+			edge.geometry.relative = true;
+			edge.edge = true;
+			
+			if (m != null)
+			{
+		    	var cell1 = new mxCell(m, new mxGeometry(-1, 0, 0, 0), 'resizable=0;html=1;align=left;verticalAlign=bottom;');
+		    	cell1.geometry.relative = true;
+		    	cell1.setConnectable(false);
+		    	cell1.vertex = true;
+		    	edge.insert(cell1);
+			}
+			
+			if (n != null)
+			{
+		    	var cell2 = new mxCell(n, new mxGeometry(1, 0, 0, 0), 'resizable=0;html=1;align=right;verticalAlign=bottom;');
+		    	cell2.geometry.relative = true;
+		    	cell2.setConnectable(false);
+		    	cell2.vertex = true;
+		    	edge.insert(cell2);
+			}
+			
+			return edge;
+		};
+		
 		var fns = [
 	   		this.addEntry(dt + 'table', function()
 			{
 				var cell = new mxCell('Table', new mxGeometry(0, 0, 160, 110),
-			    	'swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#e0e0e0;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;fontSize=14;');
+			    	'swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;align=center;fontSize=14;');
 				cell.vertex = true;
 				cell.insert(sb.cloneCell(row, 'Row 1'));
 				cell.insert(sb.cloneCell(row, 'Row 2'));
@@ -32,7 +61,7 @@
 	   	 	this.addEntry(dt + 'table section subsection', function()
 	   		{
 				var cell = new mxCell('Section', new mxGeometry(0, 0, 140, 110),
-		    		'swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=22;fillColor=none;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;fontSize=14;');
+		    		'swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=22;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;align=center;fontSize=14;');
 				cell.vertex = true;
 
 				cell.insert(sb.cloneCell(row, 'Row 1'));
@@ -42,9 +71,9 @@
 				return sb.createVertexTemplateFromCells([cell], cell.geometry.width, cell.geometry.height, 'Section'); 
 	   		}),
 			this.addDataEntry(dt + 'table section subsection', 160, 144, 'ER Table 1',
-				'7ZjbbqMwEIafhtuVDSHdXBZ60GpTqWr6AgYcsNbYrHE2SZ9+x8a0SUmURCnZdkUOEjMeH2bm44+CF8Tl6l6RqniQGeVecOuhaw9NvCBWUuo327rKVUw593zEMi+48Xwfwdfz7w6FYRuGKqKo0CfN9JuZfwhf0MbzTBJOG2+t19x56yUrORFgRXMp9MyNILDTgvFsStZyYbauNUl/tVZUSMVeIJ5A5jcYHDCs9Iy9mMn+2KzGOI8ll8ruE1Bk3lszZ2ZFt5eiNcx9bPPE71wPZLUVOCW1bk8pOSdVzRJ7bjOxJCpnIpJay9IFtVnebR9qbl8wTjjLBfhS2IuqthZNNngEtqsmVZqu9rbGujb74lpzT2VJtVpD+JJlunDR46aVqKAsL9olRqPGSerGkb/O3dF18LjGH6Ah6NCwEOz3gv7IukAUpDKXkJhmhD/RVBORm9FIy8rVk9N5W3/lDm+uk7bmeKOmTWxkasdSwq+du2RZZlfdBEVIS2JdkZSJfNrsEozeXE9uN+OSsOScyyWYBSxGhTmN1EST5JXhSjKhbSnDCD5Q8Rh9C70QMo3Bxm82fEy40rEUtVaE2a5SAG1JDWxRpmT1DGjRNtvN+yV8x4x/LDP+ScxMdiAToD6IGXWIefx5NivJ5j25o+/HIrPNx4fhcYgAk6aD++hep1IIU5akrRnqMhCcxEBwMQbCDgMKyukj3I9ooMME2MW+uGJcXiHg97gHOsYdOv61PjR0/GfiEJ4tDv20/2qPOJxPwSAOX18cvg/icAlxuPqk4jDZIw7BIA6DOPgYDepwCXWYfFJ1wPjj+z/owiV1AffyfxN3H1oOutCDLuDTHlTuEoZzAbDOjQflLmjrgfpf'),
+				'7Vhhb5swEP01fJ1sCOnysZCtmppKVdM/YMABa8amxlmS/vqdwTRJSZREKaydkIjEPc6H793Li2LHC/P1nSJF9iATyh3vh4NuHTRxvFBJqbdxBeXrkHLuuIgljjd1XBfBx3F/nkrDVRoqiKJCX7TSrVf+IXxJa+SZRJzWaKk33KLliuWcCIiChRR6bp8giOOM8WRGNnJpXl1qEv9uoiCTir1CPoHOpxgAeKz0nL2axe54L2NuVtqaipaQ89j0g99BD2S9lzgjpW52IzknRcmian9mYU5UykQgtZa5TSKcpQLuY6hFVdNTvSs8gtiyQpWm66MUV9Auv5biOypzqtUG0lcs0ZnNHtcjQRlladaUGI1qkJQ1kL6tPTA9QOwAT0zVa011KdjLkv5K2oPNSGFuoTHNCH+isSYiNU8DLQvLF6eLhl9lN2/uo4ZTvMNpnRsY7lhM+K2Fc5YkVdUF4zyUXALtUyErRZUFiZlIZ/VbvNEWerJvM5CEkgsuVxBmUIwKsxupiSbRmxYLyYSuqPQDuIDxEH3zHR86DSHG2xguk650KEWpFWHVVCkIaUWNmIJEyeIZpEObbnd177/TjHuuZtyLNDM5IBkPdaGYUUsxj/dXayXa/c4dmPu5ktnXx4fJ45QCTJtW3GfPOpZCGFqihjPU1oB3kQa83jTgtzSggE4X4W5MA51WQFXsiztG/w4Bv6sdqGPcUse/9odaHf+ZOfhXm0M34785Yg7Xq2Awh69vDt8Hc+jDHG4+qTlMjpiDN5jDYA4uRoM79OEOk0/qDhh//PwHX+jTF3An/zdx+/Bx8IUOfAFfdlB5yBiuFUAF7hx426S9g/G/'),
 			this.addDataEntry(dt + 'table section subsection', 160, 112, 'ER Table 2',
-				'7ZdRb+IwDIB/TV9Pabuy2+Najj2MSdPYHzBtaKNLkyrNDtivPydNRjtAwLFN22lQpNqxndj+atEgzurVjYKmupMF5UH8KyDXAbkK4kxJqTeyVdWrjHIeRIQVQTwOoojgL4gmh8xCa0YaUFTokzyjzvMP8CfaaR5hzmmnbfWaO227ZDUHgVK6kELP3ApBOa8YL6awlk9m61ZD/ttLaSUVe0Z7wMzHISpwWekZezbO0chEY5xnkktl94kpMd+B58xEdHsp2qLvvc8zfKW6g9XAcAqt9qeUnEPTsrk9t3GsQZVMpFJrWTsjn+VkeKiF/eA6cFYK1OW4F1W+Fl024QXKrppUabra2xqr6vfFteaGyppqtUbzJSt05axHXStJRVlZ+RChaxy0naJ88d3RddS4xh+gId6iQcklKsJtHipozC3mpRnwB5prEKVZTbVsXDk5XfjyK3d2cz/vl9yXtLNNTelYDvzaqWtWFDZqnxMhLYhtAzkT5bTbZUQ2qge3m2mJxJALjmnE4wqDUWFOIzVomL8g3EgmtK1kkuKFBc/IjyRIMNMM5XAj42XMlc6kaLUCZptKkbMlNaylhZLNI5JFfbb9xyV5hUx0LDLRSchc7SAmJu8BzMUWMPe3WKzJ7UnE9EsU7iNoQM0OGo4FaUjNxVtBc4gLk7ZL72gCcimEKdPc15BskxGfREYy+igykj2jJHqfURJ+j5IvPkpG+0bJScR8j5J/HyXJJx0ll5/uX4kN9sXnyMfPDf+Ivy0dP7foOBuLM+dDR8d/Nhwuzx4O57bfKnsvzc5o8HL9Fw=='),
+				'7ZdRb6MwDMc/Da+nAKW7PQ5628M6aVr3BQykEF2IUciu7T79ORDWsrZqe92m7TSJStg4Tvz3D6t4YVItbzTU5R3mXHrhL49deezSCxONaNZ266qWCZfSC5jIvXDiBQGjnxdcHwrz2zBWg+bKnLQy6Fb+AfnEO88jpJJ33saspPM2C1FJUGTFc1Rm5p4wsrNSyHwKK3yyWzcGst+9FZeoxTPFA1U+8clBj7WZiWe7OBgPImZ2pcupeUMx9309/ivXHSwHgVNoTH8alBLqRqTt+ezCCnQhVIzGYOWCQIpC0X1Gubjua+pO5Y/Idqpwbfhyr8Sta1NfJ/ENx4obvaLwhchN6aLHXUtYyUVR9il81wBoOkfxsnZH98jjGnigq+FWVzUuyOFv97WE2t5SXUaAfOCZAVXYp7HB2skl+byXV7uz2/t0l6RdbGylExnIK+euRJ63WedCygQlkuoThS1QTQ2ZUMW022XM1q4Ht5ttCVLKuaQywklJybiyp0EDBtIXFGsUyrRKRjFdJHjCfkReRJUmZPtrmy4brk2CqjEaRNtUThwtuGUpzjXWj0QO76vdxD56hUxwLDLBSchc7iAmZO8BzGgLmPtbEuv69iRiNiXy9xE0oGYHDceCNKRm9FbQHOLClu3KO5qADJWyMqW9hmybjPAkMqLxR5ER7RklwfuMEv97lHzxUTLeN0pOIuZ7lPz7KIk+6Si5+HT/StpkX3yOfPzc6F/xt6Xj5xYdZ2Nx5nzo6PjPhsPF2cPh3Pa3zo2PXxc0+Ej+Cw=='),
 				
 			this.addEntry(dt + 'table row', function()
 			{
@@ -142,12 +171,12 @@
 				
 				return sb.createVertexTemplateFromCells([cell.clone()], cell.geometry.width, cell.geometry.height, 'Spacer');
 			}),
-			this.createVertexTemplateEntry('text;align=center;verticalAlign=middle;spacingLeft=4;spacingRight=4;strokeColor=#000000;fillColor=#e0e0e0;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=14;',
+			this.createVertexTemplateEntry('text;align=center;verticalAlign=middle;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=14;',
 				80, 26, 'Title', 'Title', null, null, 'er entity relation table title label'),
 	   		this.addEntry(dt + 'table', function()
 			{
 	   			var cell = new mxCell('Entity', new mxGeometry(0, 0, 160, 120),
-	   		    	'swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;fillColor=#008cff;fontColor=#FFFFFF;rounded=1;fontSize=14;fontStyle=0;strokeWidth=2;resizeParent=0;resizeLast=1;shadow=0;dashed=0;align=center;');
+	   		    	'swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;rounded=1;fontSize=14;fontStyle=0;strokeWidth=2;resizeParent=0;resizeLast=1;shadow=0;dashed=0;align=center;');
 	   			cell.vertex = true;
 	   			
 	   			var cell1 = new mxCell('+Attribute1\n+Attribute2\n+Attribute3', new mxGeometry(0, 30, 160, 90),
@@ -156,32 +185,105 @@
 
 				cell.insert(cell1);
 				
-				return sb.createVertexTemplateFromCells([cell], cell.geometry.width, cell.geometry.height, 'Entity 2');
+				return sb.createVertexTemplateFromCells([cell], cell.geometry.width, cell.geometry.height, 'Entity');
 			}),
-			this.createVertexTemplateEntry('ellipse;shape=doubleEllipse;margin=10;strokeWidth=2;fontSize=14;whiteSpace=wrap;html=1;align=center;', w, h, 'Attribute', 'Attribute', null, null, dt + 'attribute'),
-			this.createVertexTemplateEntry('ellipse;shape=cloud;strokeWidth=2;fontSize=14;whiteSpace=wrap;html=1;align=center;', w, h, 'Cloud', 'Cloud', null, null, dt + 'cloud'),
-			this.createVertexTemplateEntry('strokeWidth=2;rounded=1;arcSize=10;whiteSpace=wrap;html=1;align=center;fontSize=14;', w, h, 'Entity', 'Entity 3', null, null, dt),
-			this.createVertexTemplateEntry('strokeWidth=2;whiteSpace=wrap;html=1;align=center;fontSize=14;', w, h, 'Entity', 'Entity 4', null, null, dt),
-			this.createVertexTemplateEntry('shape=ext;strokeWidth=2;margin=10;double=1;whiteSpace=wrap;html=1;align=center;fontSize=14;', w, h, 'Entity', 'Entity 5', null, null, dt),
-			this.createVertexTemplateEntry('shape=rhombus;strokeWidth=2;fontSize=17;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;align=center;fontSize=14;', w, h, 'Has', 'Has', null, null, dt + 'has'),
-			this.createVertexTemplateEntry('shape=rhombus;double=1;strokeWidth=2;fontSize=17;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;align=center;fontSize=14;', w, h, 'Has', 'Has', null, null, dt + 'has'),
+			this.createVertexTemplateEntry('whiteSpace=wrap;html=1;align=center;', 100, 40, 'Entity', 'Entity', null, null, dt),
+			this.createVertexTemplateEntry('rounded=1;arcSize=10;whiteSpace=wrap;html=1;align=center;', 100, 40, 'Entity', 'Entity (Rounded)', null, null, dt + 'chen'),
+			this.createVertexTemplateEntry('shape=ext;margin=3;double=1;whiteSpace=wrap;html=1;align=center;', 100, 40, 'Entity', 'Weak Entity', null, null, dt + 'chen'),
+			this.createVertexTemplateEntry('ellipse;whiteSpace=wrap;html=1;align=center;',
+				100, 40, 'Attribute', 'Attribute', null, null, dt + 'attribute chen'),
+			this.createVertexTemplateEntry('ellipse;whiteSpace=wrap;html=1;align=center;fontStyle=4;',
+				100, 40, 'Attribute', 'Key Attribute', null, null, dt + 'attribute key chen'),
+			this.createVertexTemplateEntry('ellipse;whiteSpace=wrap;html=1;align=center;',
+				100, 40, '<span style="border-bottom: 1px dotted">Attribute</span>', 'Weak Key Attribute', null, null, dt + 'attribute key weak chen'),
+			this.createVertexTemplateEntry('ellipse;whiteSpace=wrap;html=1;align=center;dashed=1;',
+				100, 40, 'Attribute', 'Derived Attribute', null, null, dt + 'attribute derived chen'),
+			this.createVertexTemplateEntry('ellipse;shape=doubleEllipse;margin=3;whiteSpace=wrap;html=1;align=center;',
+				100, 40, 'Attribute', 'Multivalue Attribute', null, null, dt + 'attribute multivalue chen'),
+			this.createVertexTemplateEntry('shape=associativeEntity;whiteSpace=wrap;html=1;align=center;',
+				140, 60, 'Associative\nEntity', 'Associative Entity', null, null, dt + 'associative entity chen'),
+			this.createVertexTemplateEntry('shape=rhombus;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;align=center;',
+				120, 60, 'Relationship', 'Relationship', null, null, dt + 'chen'),
+			this.createVertexTemplateEntry('shape=rhombus;double=1;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;align=center;',
+				120, 60, 'Relationship', 'Identifying Relationship', null, null, dt + 'chen'),
+			this.createVertexTemplateEntry('ellipse;shape=cloud;whiteSpace=wrap;html=1;align=center;', 100, 60, 'Cloud', 'Cloud', null, null, dt + 'cloud'),
 	   	 	this.addEntry(dt + 'hierarchy', function()
 	   		{
-			   	var cell = new mxCell('', new mxGeometry(0, 0, 100, 100), 'rounded=1;absoluteArcSize=1;html=1;strokeWidth=2;arcSize=10;fontSize=14;');
+			   	var cell = new mxCell('', new mxGeometry(0, 0, 100, 100), 'rounded=1;absoluteArcSize=1;html=1;arcSize=10;');
 			   	cell.vertex = true;
 			   	
-			   	var cell1 = new mxCell('main', new mxGeometry(0, 0, 50, 100), 'html=1;strokeWidth=2;shape=mxgraph.er.anchor;fontSize=14;whiteSpace=wrap;');
+			   	var cell1 = new mxCell('main', new mxGeometry(0, 0, 50, 100), 'html=1;shape=mxgraph.er.anchor;whiteSpace=wrap;');
 			   	cell1.vertex = true;
 			   	cell.insert(cell1);
 			   	
-			   	var cell2 = new mxCell('sub', new mxGeometry(50, 5, 45, 90), 'rounded=1;absoluteArcSize=1;html=1;strokeWidth=2;arcSize=10;fontSize=14;whiteSpace=wrap;points=[];strokeColor=inherit;fillColor=inherit;');
+			   	var cell2 = new mxCell('sub', new mxGeometry(50, 5, 45, 90), 'rounded=1;absoluteArcSize=1;html=1;arcSize=10;whiteSpace=wrap;points=[];strokeColor=inherit;fillColor=inherit;');
 			   	cell2.vertex = true;
 			   	cell.insert(cell2);
 				
 				return sb.createVertexTemplateFromCells([cell], cell.geometry.width, cell.geometry.height, 'Hierarchy'); 
 	   		}),
-			this.createVertexTemplateEntry('shape=note;strokeWidth=2;fontSize=14;size=20;whiteSpace=wrap;html=1;', w, h, 'Note', 'Note', null, null, dt + 'note'),
-		 	this.createEdgeTemplateEntry('edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToMany;endFill=1;', w, h, '', '0 to Many Optional', null, dt + 'zero many optional'),
+			this.createVertexTemplateEntry('shape=note;size=20;whiteSpace=wrap;html=1;', w, h, 'Note', 'Note', null, null, dt + 'note'),
+			this.addEntry(dt + 'relation chen', function()
+			{
+				return sb.createEdgeTemplateFromCells(
+					[createEdge('endArrow=none;html=1;rounded=0;')],
+					160, 0, 'Untitled Relation');
+			}),
+			this.addEntry(dt + 'mandatory participation chen', function()
+			{
+				return sb.createEdgeTemplateFromCells(
+					[createEdge('endArrow=none;html=1;rounded=0;', null, '1')],
+					160, 0, 'Mandatory Participation (0:1)');
+			}),
+			this.addEntry(dt + 'mandatory participation chen', function()
+			{
+				return sb.createEdgeTemplateFromCells(
+					[createEdge('endArrow=none;html=1;rounded=0;', null, 'N')],
+					160, 0, 'Mandatory Participation (0:N)');
+			}),
+			this.addEntry(dt + 'mandatory participation chen', function()
+			{
+				return sb.createEdgeTemplateFromCells(
+					[createEdge('endArrow=none;html=1;rounded=0;', 'M', 'N')],
+					160, 0, 'Mandatory Participation (M:N)');
+			}),
+			this.addEntry(dt + 'optional participation chen', function()
+			{
+				return sb.createEdgeTemplateFromCells(
+					[createEdge('endArrow=none;html=1;rounded=0;dashed=1;dashPattern=1 2;', null, '1')],
+					160, 0, 'Optional Participation (0:1)');
+			}),
+			this.addEntry(dt + 'optional participation chen', function()
+			{
+				return sb.createEdgeTemplateFromCells(
+					[createEdge('endArrow=none;html=1;rounded=0;dashed=1;dashPattern=1 2;', null, 'N')],
+					160, 0, 'Optional Participation (0:N)');
+			}),
+			this.addEntry(dt + 'optional participation chen', function()
+			{
+				return sb.createEdgeTemplateFromCells(
+					[createEdge('endArrow=none;html=1;rounded=0;dashed=1;dashPattern=1 2;', 'M', 'N')],
+					160, 0, 'Optional Participation (M:N)');
+			}),
+			this.addEntry(dt + 'recursive relationship chen', function()
+			{
+				return sb.createEdgeTemplateFromCells(
+					[createEdge('shape=link;html=1;rounded=0;', null, '1')],
+					160, 0, 'Recursive Relationship (0:1)');
+			}),
+			this.addEntry(dt + 'recursive relationship chen', function()
+			{
+				return sb.createEdgeTemplateFromCells(
+					[createEdge('shape=link;html=1;rounded=0;', null, 'N')],
+					160, 0, 'Recursive Relationship (0:N)');
+			}),
+			this.addEntry(dt + 'recursive relationship chen', function()
+			{
+				return sb.createEdgeTemplateFromCells(
+					[createEdge('shape=link;html=1;rounded=0;', 'M', 'N')],
+					160, 0, 'Recursive Relationship (M:N)');
+			}),
+			this.createEdgeTemplateEntry('edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToMany;endFill=1;', w, h, '', '0 to Many Optional', null, dt + 'zero many optional'),
 		 	this.createEdgeTemplateEntry('edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERoneToMany;', w, h, '', '1 to Many', null, dt + 'one many'),
 		 	this.createEdgeTemplateEntry('edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERmandOne;', w, h, '', '1 Mandatory', null, dt + 'one mandatory'),
 		 	this.createEdgeTemplateEntry('edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERmandOne;startArrow=ERmandOne;', w, h, '', '1 to 1', null, dt + 'one'),

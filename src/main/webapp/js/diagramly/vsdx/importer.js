@@ -15,7 +15,7 @@ var com;
              * @class
              */
             var mxVsdxCodec = (function () {
-                function mxVsdxCodec() {
+                function mxVsdxCodec(editorUi) {
                     this.RESPONSE_END = "</mxfile>";
                     this.RESPONSE_DIAGRAM_START = "";
                     this.RESPONSE_DIAGRAM_END = "</diagram>";
@@ -44,6 +44,7 @@ var com;
                      */
                     this.debugPaths = false;
                     this.vsdxModel = null;
+                    this.editorUi = editorUi;
                 }
                 mxVsdxCodec.vsdxPlaceholder_$LI$ = function ()
                 {
@@ -150,6 +151,13 @@ var com;
                     }
                 };
                 
+                mxVsdxCodec.incorrectXMLReqExp = [
+                	{
+                		regExp: /(\>[^&<]*)\&([^&<;]*\<)/g,
+                		repl: '$1&amp;$2'
+                	}
+                ];
+                
                 /**
                  * Parses the input VSDX format and uses the information to populate
                  * the specified graph.
@@ -189,34 +197,60 @@ var com;
 	                    {
 	                        var array122 = (function (m) { if (m.entries == null)
 	                            m.entries = []; return m.entries; })(pages);
-	                        var _loop_1 = function (index121) {
+	                        var _loop_1 = function (index121, remaining) {
 	                            var entry = array122[index121];
 	                            {
 	                                var page_1 = entry.getValue();
-	                                if (!page_1.isBackground()) {
+	                                //As per many requests, include all pages in the output
+	                                //if (!page_1.isBackground()) 
+	                                {
 	                                    var graph_1 = this_1.createMxGraph();
 	                                    graph_1.getModel().beginUpdate();
-	                                    this_1.importPage(page_1, graph_1, graph_1.getDefaultParent());
+	                                    this_1.importPage(page_1, graph_1, graph_1.getDefaultParent(), true);
 	                                    this_1.scaleGraph(graph_1, page_1.getPageScale() / page_1.getDrawingScale());
 	                                    graph_1.getModel().endUpdate();
-	                                    /* append */ (function (sb) { return sb.str = sb.str.concat(_this.RESPONSE_DIAGRAM_START); })(xmlBuilder);
-	                                    /* append */ (function (sb) { return sb.str = sb.str.concat(_this.processPage(graph_1, page_1)); })(xmlBuilder);
-	                                    /* append */ (function (sb) { return sb.str = sb.str.concat(_this.RESPONSE_DIAGRAM_END); })(xmlBuilder);
+
+	                                    this_1.postImportPage(page_1, graph_1, function()
+	                                    {
+	                                    	this_1.sanitiseGraph(graph_1);
+		                                    /* append */ (function (sb) { return sb.str = sb.str.concat(_this.RESPONSE_DIAGRAM_START); })(xmlBuilder);
+		                                    /* append */ (function (sb) { return sb.str = sb.str.concat(_this.processPage(graph_1, page_1)); })(xmlBuilder);
+		                                    /* append */ (function (sb) { return sb.str = sb.str.concat(_this.RESPONSE_DIAGRAM_END); })(xmlBuilder);
+		                                    
+		                                    if (index121 < array122.length - 1)
+		                                	{
+		    	                            	_loop_1(index121 + 1, remaining);
+		                                	}
+		    	                            else
+		                                	{
+		    	                            	remaining();
+		                                	}
+	                                    });
 	                                }
 	                            }
 	                        };
 	                        var this_1 = _this;
-	                        for (var index121 = 0; index121 < array122.length; index121++) {
-	                            _loop_1(index121);
+	                        
+	                        if (array122.length > 0)
+                        	{
+	                        	_loop_1(0, remaining);
+                        	}
+	                        else
+	                        {
+	                        	remaining();
 	                        }
 	                    }
-	                    /* append */ (function (sb) { return sb.str = sb.str.concat(_this.RESPONSE_END); })(xmlBuilder);
-	                    var dateAfter = new Date();
-                       	//console.log("File processed in " + (dateAfter - dateBefore) + "ms");
-	                    //console.log(xmlBuilder.str);
-	                    if (callback) 
+	                    
+	                    function remaining()
 	                    {
-                     		callback(xmlBuilder.str);
+		                    /* append */ (function (sb) { return sb.str = sb.str.concat(_this.RESPONSE_END); })(xmlBuilder);
+		                    var dateAfter = new Date();
+	                       	//console.log("File processed in " + (dateAfter - dateBefore) + "ms");
+		                    //console.log(xmlBuilder.str);
+		                    if (callback) 
+		                    {
+	                     		callback(xmlBuilder.str);
+		                    }
 	                    }
                     };
 
@@ -271,7 +305,7 @@ var com;
 	        					var filename = zipEntry.name;
 	                        	var name = filename.toLowerCase();
 	        					var nameLen = name.length;
-	                            if (name.indexOf('.xml') == nameLen - 4 || name.indexOf('.xml.rels') == nameLen - 9) //xml files
+	                            if (name.indexOf('.xml') == nameLen - 4 || name.indexOf('.rels') == nameLen - 5) //xml files
 	                            {
 	                            	filesCount++;
 	        	                    zipEntry.async("string").then(function (str) 
@@ -291,6 +325,18 @@ var com;
 	                                        	if (str.charCodeAt(1) === 0 && str.charCodeAt(3) === 0 && str.charCodeAt(5) === 0)
                                         		{
 	                                        		doc = mxVsdxCodec.parseXml(mxVsdxCodec.decodeUTF16LE(str));
+                                        		}
+	                                        	else
+                                        		{
+	                                        		for (var r = 0; r < mxVsdxCodec.incorrectXMLReqExp.length; r++)
+                                        			{
+	                                        			if (mxVsdxCodec.incorrectXMLReqExp[r].regExp.test(str))
+                                        				{
+	                                        				str = str.replace(mxVsdxCodec.incorrectXMLReqExp[r].regExp, mxVsdxCodec.incorrectXMLReqExp[r].repl);
+                                        				}
+                                        			}
+	                                        		
+	                                        		doc = mxVsdxCodec.parseXml(str);
                                         		}
 	                                        	//TODO add any other non-standard encoding that may be needed 
 	                                        }
@@ -325,10 +371,13 @@ var com;
 	                            				//send to emf conversion service
 	                        					var formData = new FormData();
 	                        					formData.append('img', emfBlob, name);
-
+	                        					formData.append('inputformat', 'emf');
+	                        					formData.append('outputformat', 'png');
+	                        					
 	                        					var xhr = new XMLHttpRequest();
 	                        					xhr.open('POST', EMF_CONVERT_URL);
 	                        					xhr.responseType = 'blob';
+	                        					_this.editorUi.addRemoteServiceSecurityCheck(xhr);
 	                        					
 	                        					xhr.onreadystatechange = mxUtils.bind(this, function()
 	                        					{
@@ -340,8 +389,10 @@ var com;
 	                        								{
 	                        									var reader = new FileReader();
 	                        									reader.readAsDataURL(xhr.response); 
-	                        									reader.onloadend = function() {
-	                        									    mediaData[filename] = reader.result.substr(22); //data:image/png;base64, is 23 character
+	                        									reader.onloadend = function() 
+	                        									{
+	                        										var dataPos = reader.result.indexOf(',') + 1;
+	                        									    mediaData[filename] = reader.result.substr(dataPos);
 		                        									emfDone();
 	                        									}
 	                        								}
@@ -453,8 +504,8 @@ var com;
                     if (page != null) {
                         //var pageName_1 = org.apache.commons.lang3.StringEscapeUtils.escapeXml11(page.getPageName());
                     	//TODO FIXME htmlEntities is not exactly as escapeXml11 but close
-                        var pageName_1 = mxUtils.htmlEntities(page.getPageName());
-                        output += '<diagram name="' + pageName_1 + '" id="' + pageName_1 + '">';
+                        var pageName_1 = mxUtils.htmlEntities(page.getPageName()) + (page.isBackground()? ' (Background)' : '');
+                        output += '<diagram name="' + pageName_1 + '" id="' + pageName_1.replace(/\s/g, '_') + '">';
                     }
                     
                     output += Graph.compress(modelString);
@@ -566,7 +617,7 @@ var com;
                  * @param {*} parent The parent of the elements to be imported.
                  * @return {number}
                  */
-                mxVsdxCodec.prototype.importPage = function (page, graph, parent) 
+                mxVsdxCodec.prototype.importPage = function (page, graph, parent, noSanitize) 
                 {
                 	//BackPages can include another backPage, so it is recursive
                 	var backPage = page.getBackPage();
@@ -587,26 +638,33 @@ var com;
                 	var layers = page.getLayers();
                 	this.layersMap[0] = graph.getDefaultParent();
                 	
-                	if (layers.length > 1)
+            		for (var k = 0; k < layers.length; k++)
             		{
-                		for (var k = 1; k < layers.length; k++)
-	            		{
-                			var layer = layers[k];
-                			var layerCell = new mxCell();		
-                			layerCell.setVisible(layer.Visible == 1);
+            			var layer = layers[k];
+            			
+            			if (k == 0)
+            			{
+            				var layerCell = graph.getDefaultParent();
+            			}
+            			else
+            			{
+            				var layerCell = new mxCell();
+            				graph.addCell(layerCell, graph.model.root, k);
+            			}
+            			
+            			layerCell.setVisible(layer.Visible == 1);
 
-                			if (layer.Lock == 1)
-                			{
-                				layerCell.setStyle("locked=1;");
-                			}
-                			
-                			//TODO handlle color and other properties
-                			layerCell.setValue(layer.Name);
-                			
-                			this.layersMap[k] = layerCell;
-                    		graph.addCell(layerCell, graph.model.root, k);
-	            		}
+            			if (layer.Lock == 1)
+            			{
+            				layerCell.setStyle("locked=1;");
+            			}
+            			
+            			//TODO handlle color and other properties
+            			layerCell.setValue(layer.Name);
+            			
+            			this.layersMap[k] = layerCell;
             		}
+
                 	//add shapes
                     var shapes = page.getShapes();
                     var entries = (function (a) { var i = 0; return { next: function () { return i < a.length ? a[i++] : null; }, hasNext: function () { return i < a.length; } }; })(/* entrySet */ (function (m) { if (m.entries == null)
@@ -648,9 +706,117 @@ var com;
                         }
                     }
                     ;
-                    this.sanitiseGraph(graph);
+                    if (!noSanitize)
+                    {
+                        this.sanitiseGraph(graph);
+                    }
+
                     return pageHeight;
                 };
+                
+                /**
+                 * This function is for doing any async processing needed after importing a page
+                 */
+                mxVsdxCodec.prototype.postImportPage = function(page, graph, callback)
+                {
+                	try
+                	{
+                		var me = this;
+                		var toCropImgs = [];
+	                	var shapes = page.getShapes().entries || [];
+	                	
+	                	for (var i = 0; i < shapes.length; i++)
+	            		{
+	                		var shape = shapes[i].value || {};
+	                		
+	                		if (shape.toBeCroppedImg)
+	                		{
+	                			toCropImgs.push(shape);
+	                		}
+	            		}
+	                	
+	                	if (toCropImgs.length > 0)
+                		{
+	                		function cropImage(index, callback)
+	                		{
+	                			function next()
+	                			{
+	                				if (index < toCropImgs.length - 1)
+	                				{
+		                				cropImage(index + 1, callback);
+	                				}
+		                			else
+	                				{
+		                				callback();
+	                				}
+	                			};
+	                			
+	                			var shape = toCropImgs[index];
+	                			var imgInfo = shape.toBeCroppedImg;
+	                			
+	                			var cell = (function (m, k) { if (m.entries == null)
+	                                m.entries = []; for (var i = 0; i < m.entries.length; i++)
+	                                if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+	                                    return m.entries[i].value;
+	                                } return null; })(me.vertexMap, new com.mxgraph.io.vsdx.ShapePageId(page.Id, shape.Id));
+	                            
+	                			var img = new Image();
+	                			
+	                			img.onload = function()
+	                			{
+	                				var data = imgInfo.iData;
+                                    var type = imgInfo.iType;
+                                    
+	                				try
+		                			{
+                                        //TODO There is still some minor inaccuracy in width/height
+                                        var scaleX = img.width / imgInfo.imgWidth;
+                                        var scaleY = img.height / imgInfo.imgHeight;
+		                				var offsetX = (-imgInfo.imgOffsetX) * scaleX;
+		                				var offsetY = (imgInfo.imgHeight - imgInfo.height + imgInfo.imgOffsetY) * scaleY;
+		                			    var c = document.createElement("canvas");
+		                			    c.width = imgInfo.width * scaleX;
+		                              	c.height = imgInfo.height * scaleY;
+                                        var ctx = c.getContext("2d");
+                                        ctx.fillStyle = "#FFFFFF";
+                                        ctx.fillRect(0, 0, c.width, c.height);
+                                        ctx.drawImage(img, offsetX, offsetY, c.width, c.height, 0, 0, c.width, c.height);
+		                            	var jpgData = c.toDataURL("image/jpeg");
+	                                    data = jpgData.substr(23); //23 is the length of "data:image/jpeg;base64,"
+                                        type = 'jpg';
+		                			}
+	                				catch(e) 
+	                				{
+	                					console.log(e);
+	                				}
+	                				
+	                				cell.style += ';image=data:image/' + type + ',' + data;
+	                			    next();
+	                			};
+	                			
+	                			img.src = 'data:image/' + imgInfo.iType + ';base64,' + imgInfo.iData;
+
+	                			img.onerror = function()
+	                			{
+	                				cell.style += ';image=data:image/' + imgInfo.iType + ',' + imgInfo.iData;
+	                				next();
+	                			}
+	                		};
+	                		
+	                		cropImage(0, callback);
+                		}
+	                	else
+                		{
+	                		callback();
+	                	}
+                	}
+                	catch(e)
+                	{
+                        console.log(e);
+                        callback();
+                	}
+                };
+                
                 /**
                  * Adds a vertex to the graph if 'shape' is a vertex or add the shape to edgeShapeMap if it is an edge.
                  * This method doesn't import sub-shapes of 'shape'.
@@ -1243,6 +1409,27 @@ var com;
                             model.remove(removeChild);
                         }
                     }
+                    
+                    //Check for -ve width/height cells and correct it
+                    var geo = cell.geometry;
+                    
+                    if (geo != null)
+                	{
+                    	if (geo.height < 0)
+                		{
+                    		geo.height = Math.abs(geo.height);
+                    		geo.y -= geo.height;
+                    		cell.style += ';flipV=1;';
+                		}
+
+                    	if (geo.width < 0)
+                		{
+                    		geo.width = Math.abs(geo.width);
+                    		geo.x -= geo.width;
+                    		cell.style += ';flipH=1;';
+                		}
+                	}
+                    
                     if (childCount > 0) {
                         childCount = model.getChildCount(cell);
                     }
@@ -1269,12 +1456,13 @@ var com;
         (function (io) {
             var mxVssxCodec = (function (_super) {
                 __extends(mxVssxCodec, _super);
-                function mxVssxCodec() {
+                function mxVssxCodec(editorUi) {
                     var _this = _super.call(this) || this;
                     _this.RESPONSE_END = "";
                     _this.RESPONSE_DIAGRAM_START = "";
                     _this.RESPONSE_DIAGRAM_END = "";
                     _this.RESPONSE_HEADER = "";
+                    _this.editorUi = editorUi;
                     return _this;
                 }
                 mxVssxCodec.prototype.decodeVssx = function (file, callback, charset, onerror) {
@@ -1296,8 +1484,6 @@ var com;
                                     var master = array129[index128];
                                     {
                                         var shapeGraph = this_1.createMxGraph();
-                                        var shapeElem = master.getMasterShape().getShape();
-                                        var shape = new com.mxgraph.io.vsdx.VsdxShape(page, shapeElem, !page.isEdge(shapeElem), masterShapes, null, this_1.vsdxModel);
                                         
                                         var scale = 1;
                                         
@@ -1320,34 +1506,46 @@ var com;
                                         	 
                                         	 scale = pScaleV / dScaleV;
                                     	}
+
+                                        var hasCells = false;
                                         
-                                        var cell = null;
-                                        if (shape.isVertex()) {
-                                            /* clear */ this_1.edgeShapeMap.entries = [];
-                                            /* clear */ this_1.parentsMap.entries = [];
-                                            cell = this_1.addShape(shapeGraph, shape, shapeGraph.getDefaultParent(), 0, 1169);
-                                            {
-                                                var array131 = (function (m) { if (m.entries == null)
-                                                    m.entries = []; return m.entries; })(this_1.edgeShapeMap);
-                                                for (var index130 = 0; index130 < array131.length; index130++) {
-                                                    var edgeEntry = array131[index130];
-                                                    {
-                                                        var parent_1 = (function (m, k) { if (m.entries == null)
-                                                            m.entries = []; for (var i = 0; i < m.entries.length; i++)
-                                                            if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
-                                                                return m.entries[i].value;
-                                                            } return null; })(this_1.parentsMap, edgeEntry.getKey());
-                                                        this_1.addUnconnectedEdge(shapeGraph, parent_1, edgeEntry.getValue(), 1169);
-                                                    }
-                                                }
-                                            }
+                                        for (var chI = 0; master.firstLevelShapes != null && chI < master.firstLevelShapes.length; chI++)
+                                        {
+	                                        var shapeElem = master.firstLevelShapes[chI].getShape();
+	                                        var shape = new com.mxgraph.io.vsdx.VsdxShape(page, shapeElem, !page.isEdge(shapeElem), masterShapes, null, this_1.vsdxModel);
+	
+	                                        var cell = null;
+	                                        if (shape.isVertex()) {
+	                                            /* clear */ this_1.edgeShapeMap.entries = [];
+	                                            /* clear */ this_1.parentsMap.entries = [];
+	                                            cell = this_1.addShape(shapeGraph, shape, shapeGraph.getDefaultParent(), 0, 1169);
+	                                            {
+	                                                var array131 = (function (m) { if (m.entries == null)
+	                                                    m.entries = []; return m.entries; })(this_1.edgeShapeMap);
+	                                                for (var index130 = 0; index130 < array131.length; index130++) {
+	                                                    var edgeEntry = array131[index130];
+	                                                    {
+	                                                        var parent_1 = (function (m, k) { if (m.entries == null)
+	                                                            m.entries = []; for (var i = 0; i < m.entries.length; i++)
+	                                                            if (m.entries[i].key.equals != null && m.entries[i].key.equals(k) || m.entries[i].key === k) {
+	                                                                return m.entries[i].value;
+	                                                            } return null; })(this_1.parentsMap, edgeEntry.getKey());
+	                                                        this_1.addUnconnectedEdge(shapeGraph, parent_1, edgeEntry.getValue(), 1169);
+	                                                    }
+	                                                }
+	                                            }
+	                                        }
+	                                        else {
+	                                            cell = this_1.addUnconnectedEdge(shapeGraph, null, shape, 1169);
+	                                        }
+	                                        
+	                                        hasCells |= (cell != null);
                                         }
-                                        else {
-                                            cell = this_1.addUnconnectedEdge(shapeGraph, null, shape, 1169);
-                                        }
-                                        if (cell != null) {
+                                        
+                                        if (hasCells) 
+                                        {
                                         	this_1.scaleGraph(shapeGraph, scale);
-                                            var geo_1 = this_1.normalizeGeo(cell);
+                                        	var size = this_1.normalizeGraph(shapeGraph);
                                             this_1.sanitiseGraph(shapeGraph);
                                             if (shapeGraph.getModel().getChildCount(shapeGraph.getDefaultParent()) === 0)
                                                 return "continue";
@@ -1356,16 +1554,16 @@ var com;
                                             var shapeXML_1 = _super.prototype.processPage.call(this_1, shapeGraph, null);
                                             /* append */ (function (sb) { return sb.str = sb.str.concat(shapeXML_1); })(shapes_1);
                                             /* append */ (function (sb) { return sb.str = sb.str.concat("\",\"w\":"); })(shapes_1);
-                                            /* append */ (function (sb) { return sb.str = sb.str.concat(geo_1.width); })(shapes_1);
+                                            /* append */ (function (sb) { return sb.str = sb.str.concat(size.width); })(shapes_1);
                                             /* append */ (function (sb) { return sb.str = sb.str.concat(",\"h\":"); })(shapes_1);
-                                            /* append */ (function (sb) { return sb.str = sb.str.concat(geo_1.height); })(shapes_1);
+                                            /* append */ (function (sb) { return sb.str = sb.str.concat(size.height); })(shapes_1);
                                             /* append */ (function (sb) { return sb.str = sb.str.concat(",\"title\":"); })(shapes_1);
                                             var shapeName_1 = master.getName();
                                             if (shapeName_1 == null)
                                         	{
                                             	shapeName_1 = "";
                                         	}
-                                            shapeName_1 = JSON.stringify(mxUtils.htmlEntities(shapeName_1));
+                                            shapeName_1 = mxUtils.htmlEntities(JSON.stringify(shapeName_1));
                                             /* append */ (function (sb) { return sb.str = sb.str.concat(shapeName_1); })(shapes_1);
                                             /* append */ (function (sb) { return sb.str = sb.str.concat("}"); })(shapes_1);
                                             comma_1 = ",";
@@ -1421,6 +1619,86 @@ var com;
                     }
                     return geo;
                 };
+                
+                mxVssxCodec.prototype.normalizeGraph = function (graph) 
+                {
+                	//Find minX/Y, maxX/Y
+                	var minX, minY, maxX, maxY;
+
+                	function getDimMinMax(pt)
+                	{
+                		if (pt != null)
+                		{
+                			if (minX == null)
+	            			{
+	                			minX = pt.x; minY = pt.y; maxX = pt.x + (pt.width || 0); maxY = pt.y + (pt.height || 0);
+	            			}
+	                		else
+                			{
+	                			minX = Math.min(pt.x, minX);
+	                			minY = Math.min(pt.y, minY);
+	                			maxX = Math.max(pt.x + (pt.width || 0), maxX);
+	                			maxY = Math.max(pt.y + (pt.height || 0), maxY);
+                			}
+                		}
+                	};
+                	
+                	for (var id in graph.model.cells)
+            		{
+                		var cell = graph.model.cells[id];
+                		var geo = cell.geometry;
+                		
+                		if (geo != null && cell.parent.id == 1)
+                		{
+                			if (cell.vertex)
+                			{
+                				getDimMinMax(geo);
+                			}
+                			else
+            				{
+                				getDimMinMax(geo.sourcePoint);
+							    getDimMinMax(geo.targetPoint);
+							    var points = geo.points;
+							    
+							    for (var i = 0; points != null && i < points.length; i++) 
+								{
+							        getDimMinMax(points[i]);   
+							    }
+            				}
+                		}
+            		}
+                	
+                	//Remove minX, minY from all geo and fix edges also
+                	var srcP = {x: minX, y: minY};
+                	
+                	for (var id in graph.model.cells)
+            		{
+                		var cell = graph.model.cells[id];
+                		var geo = cell.geometry;
+                		
+                		if (geo != null && cell.parent.id == 1)
+                		{
+	                		geo.x -= minX;
+	                		geo.y -= minY;
+                	
+	                		if (cell.isEdge())
+	            			{
+		                        this.transPoint(geo.sourcePoint, srcP);
+	                			this.transPoint(geo.targetPoint, srcP);
+		                        this.transPoint(geo.offset, srcP);
+		                        var points = geo.points;
+		                        
+	                            for (var i = 0; points != null && i < points.length; i++) 
+	                            {
+	                                this.transPoint(points[i], srcP);
+	                            }
+	            			}
+                		}
+            		}
+
+                	return {width: maxX - minX, height: maxY - minY}
+                };
+                
                 mxVssxCodec.prototype.transPoint = function (p, srcP) {
                     if (p != null) {
                         p.x = (p.x - srcP.x);
@@ -2312,7 +2590,12 @@ var com;
                         var _loop_1 = function (index124) {
                             var row = this_1.rows[index124];
                             {
-                                /* append */ (function (sb) { return sb.str = sb.str.concat(row.handle(p, shape)); })(geomElemParsed);
+                                /* append */ 
+                            	(function (sb) 
+                                {
+                            		//Some files has null rows
+                                	return sb.str = sb.str.concat(row != null? row.handle(p, shape) : ''); 
+                                })(geomElemParsed);
                             }
                         };
                         var this_1 = this;
@@ -2337,7 +2620,11 @@ var com;
                          * @return {number}
                          */
                         mxVsdxGeometry$0.prototype.compare = function (r1, r2) {
-                            return r1.getIndex() - r2.getIndex();
+                        	//Some files has null rows
+                        	var r1i = r1 != null? r1.getIndex() : 0;
+                        	var r2i = r2 != null? r2.getIndex() : 0;
+                        	
+                            return r1i - r2i;
                         };
                         return mxVsdxGeometry$0;
                     }());
@@ -2682,7 +2969,13 @@ var com;
                      * @param {*} shapeElem
                      * @param {com.mxgraph.io.vsdx.mxVsdxModel} model
                      */
-                    mxVsdxMaster.prototype.processMasterShape = function (shapeElem, model) {
+                    mxVsdxMaster.prototype.processMasterShape = function (shapeElem, model, internal) 
+                    {
+                    	if (!internal) 
+                		{
+                    		this.firstLevelShapes = [];
+                		}
+                    	
                         var shapeChild = shapeElem.firstChild;
                         while ((shapeChild != null)) {
                             if ((shapeChild != null && (shapeChild.nodeType == 1)) && (function (o1, o2) { if (o1 && o1.equals) {
@@ -2704,13 +2997,36 @@ var com;
                                         var masterShape = new com.mxgraph.io.vsdx.Shape(shape, model);
                                         this.masterShape = (this.masterShape == null) ? masterShape : this.masterShape;
                                         /* put */ (this.childShapes[shapeId] = masterShape);
-                                        this.processMasterShape(shape, model);
+                                        
+                                        if (!internal) 
+                                		{
+                                    		this.firstLevelShapes.push(masterShape);
+                                		}
+                                        
+                                        this.processMasterShape(shape, model, true);
                                     }
                                     shapesChild = shapesChild.nextSibling;
                                 }
                                 ;
-                                break;
                             }
+                            else if (shapeChild != null && shapeChild.nodeType == 1 && shapeChild.nodeName == "Connects") 
+                            {
+                            	this.connects = {};
+                                var connectsChild = shapeChild.firstChild;
+                                
+                                while (connectsChild != null) 
+                                {
+                                    if (connectsChild != null && connectsChild.nodeType == 1 && connectsChild.nodeName == "Connect") 
+                                    {
+                                        var connectElem = connectsChild;
+                                        var connect = new com.mxgraph.io.vsdx.mxVsdxConnect(connectElem);
+                                        this.connects[connect.getFromSheet()] = connect;
+                                    }
+                                    
+                                    connectsChild = connectsChild.nextSibling;
+                                }
+                            }
+                            
                             shapeChild = shapeChild.nextSibling;
                         }
                         ;
@@ -3310,7 +3626,9 @@ var com;
                                     else {
                                         return o1 === o2;
                                     } })(masterId, "")) {
-                                        elem = masterTmp.getSubShape(masterId).getShape();
+                                    	var subShape = masterTmp.getSubShape(masterId)
+                                    	//Some files has non-existing master sub-shapes
+                                        elem = subShape != null? subShape.getShape() : elem;
                                     }
                                     isEdge = this.isEdge(elem);
                                 }
@@ -8555,10 +8873,72 @@ var com;
                         }
                         else {
                             return o1 === o2;
-                        } })(childName, "ForeignData")) {
+                        } })(childName, "ForeignData")) 
+                        {
+                        	function getForeignRel(elem, filename)
+                        	{
+                        		var fdChild = elem.firstChild;
+                                
+                                while (fdChild != null) 
+                                {
+                                    if (fdChild.nodeType == 1) 
+                                    {
+                                        var fdElem = fdChild;
+                                        var grandchildName = fdElem.nodeName;
+                                        
+                                        if (grandchildName.toLowerCase() == "rel") 
+                                        {
+                                            var rid = fdElem.getAttribute("r:id");
+                                            
+                                            if (rid != null && !(rid.length === 0)) 
+                                            {
+                                                var index = filename.lastIndexOf('/');
+                                                var pre = "";
+                                                var post = "";
+                                                
+                                                try 
+                                                {
+                                                    pre = filename.substring(0, index);
+                                                    post = filename.substring(index, filename.length);
+                                                }
+                                                catch (e) 
+                                                {
+                                                    return;
+                                                }
+                                                
+                                                var relElem = model.getRelationship(rid, pre + "/_rels" + post + ".rels");
+                                                
+                                                if (relElem != null) 
+                                                {
+                                                    var target = relElem.getAttribute("Target") || "";
+                                                    var type = relElem.getAttribute("Type");
+                                                    index = target.lastIndexOf('/');
+                                                    
+                                                    try 
+                                                    {
+                                                        target = target.substring(index + 1, target.length);
+                                                    }
+                                                    catch (e) 
+                                                    {
+                                                        return;
+                                                    }
+                                                    
+                                                    return {type: type, target: target};
+                                                }
+                                                
+                                                return;
+                                            }
+                                        }
+                                    }
+                                    fdChild = fdChild.nextSibling;
+                                }
+                            }
+                            
                             var filename = elem.ownerDocument.vsdxFileName; //was getDocumentURI()
                             var iType = elem.getAttribute("ForeignType");
                             var compression = elem.getAttribute("CompressionType") || "";
+                            var typeTarget = null;
+
                             if ((function (o1, o2) { if (o1 && o1.equals) {
                                 return o1.equals(o2);
                             }
@@ -8588,70 +8968,66 @@ var com;
                             } })(iType, "EnhMetaFile")) {
                                 compression = "png"; //we convert emf files to png
                             }
+                            else if (iType == "Object") //This is a very basic support for embedded visio objects by looking for associated image
+                            {
+                                typeTarget = getForeignRel(elem, filename);
+
+                                if (typeTarget.type.indexOf('/oleObject') > 0)
+                                {
+                                    var relElem = model.getRelationship("rId1", "visio/embeddings/_rels/" + typeTarget.target + ".rels");
+                                    
+                                    if (relElem != null) 
+                                    {
+                                        var target = relElem.getAttribute("Target");
+                                        var type = relElem.getAttribute("Type");
+                                        
+                                        try 
+                                        {
+                                            var index = target.lastIndexOf('/');
+                                            target = target.substring(index + 1, target.length);
+                                        }
+                                        catch (e) 
+                                        {
+                                            return;
+                                        }
+                                        
+                                        compression = "png";
+                                        typeTarget = {type: type, target: target};
+                                    }
+                                    else
+                                    {
+                                        return;
+                                    }
+                                }
+                            }
                             else {
                                 return;
                             }
-                            var fdChild = elem.firstChild;
-                            if (fdChild != null) {
-                                if (fdChild != null && (fdChild.nodeType == 1)) {
-                                    var fdElem = fdChild;
-                                    var grandchildName = fdElem.nodeName;
-                                    if ((function (o1, o2) { if (o1 && o1.equals) {
-                                        return o1.equals(o2);
-                                    }
-                                    else {
-                                        return o1 === o2;
-                                    } })(grandchildName.toLowerCase(), "rel")) {
-                                        var rid = fdElem.getAttribute("r:id");
-                                        if (rid != null && !(rid.length === 0)) {
-                                            var index = filename.lastIndexOf('/');
-                                            var pre = "";
-                                            var post = "";
-                                            try {
-                                                pre = filename.substring(0, index);
-                                                post = filename.substring(index, filename.length);
-                                            }
-                                            catch (e) {
-                                                return;
-                                            }
-                                            ;
-                                            var relElem = model.getRelationship(rid, pre + "/_rels" + post + ".rels");
-                                            if (relElem != null) {
-                                                var target = relElem.getAttribute("Target") || "";
-                                                var type = relElem.getAttribute("Type");
-                                                index = target.lastIndexOf('/');
-                                                try {
-                                                    target = target.substring(index + 1, target.length);
-                                                }
-                                                catch (e) {
-                                                    return;
-                                                }
-                                                ;
-                                                if (type != null && (function (str, searchString) { var pos = str.length - searchString.length; var lastIndex = str.indexOf(searchString, pos); return lastIndex !== -1 && lastIndex === pos; })(type, "image")) {
-                                                    this.imageData = ({});
-                                                    var iData = model.getMedia(com.mxgraph.io.mxVsdxCodec.vsdxPlaceholder + "/media/" + target);
-                                                    if (!iData)
-                                                	{
-                                                    	/* put */ (this.imageData["iData"] = Shape.ERROR_IMAGE);
-                                                    	/* put */ (this.imageData["iType"] = 'svg+xml');
-                                                	}
-                                                    else
-                                                	{
-	                                                    /* put */ (this.imageData["iData"] = iData);
-	                                                    if ((function (str, searchString) { var pos = str.length - searchString.length; var lastIndex = str.indexOf(searchString, pos); return lastIndex !== -1 && lastIndex === pos; })(target.toLowerCase(), ".bmp")) {
-	                                                        compression = "jpg";
-	                                                    }
-	                                                    /* put */ (this.imageData["iType"] = compression);
-                                                	}
-                                                }
-                                            }
-                                            else {
-                                            }
-                                            return;
-                                        }
-                                    }
+
+                            if (typeTarget == null)
+                            {
+                                typeTarget = getForeignRel(elem, filename);
+                            }
+
+                            var type = typeTarget.type, target = typeTarget.target;
+
+                            if (type != null && (function (str, searchString) { var pos = str.length - searchString.length; var lastIndex = str.indexOf(searchString, pos); return lastIndex !== -1 && lastIndex === pos; })(type, "image")) 
+                            {
+                                this.imageData = ({});
+                                var iData = model.getMedia(com.mxgraph.io.mxVsdxCodec.vsdxPlaceholder + "/media/" + target);
+                                if (!iData)
+                                {
+                                    /* put */ (this.imageData["iData"] = Shape.ERROR_IMAGE);
+                                    /* put */ (this.imageData["iType"] = 'svg+xml');
                                 }
-                                fdChild = fdChild.nextSibling;
+                                else
+                                {
+                                    /* put */ (this.imageData["iData"] = iData);
+                                    if ((function (str, searchString) { var pos = str.length - searchString.length; var lastIndex = str.indexOf(searchString, pos); return lastIndex !== -1 && lastIndex === pos; })(target.toLowerCase(), ".bmp")) {
+                                        compression = "jpg";
+                                    }
+                                    /* put */ (this.imageData["iType"] = compression);
+                                }
                             }
                         }
                         else if ((function (o1, o2) { if (o1 && o1.equals) {
@@ -9365,6 +9741,13 @@ var com;
                         _this.vertex = vertex || (_this.childShapes != null && !(function (m) { if (m.entries == null)
                             m.entries = []; return m.entries.length == 0; })(_this.childShapes)) || (_this.geomList != null && (!_this.geomList.isNoFill()  || _this.geomList.getGeoCount() > 1));
                         _this.layerMember = _this.getValue(_this.getCellElement$java_lang_String("LayerMember"));
+                        
+                        //We don't have a cell belongs to multiple layers
+                        if (_this.layerMember && _this.layerMember.indexOf('0;') == 0)
+                    	{
+                        	 _this.layerMember =  _this.layerMember.substr(2);
+                    	}
+                        
                         return _this;
                     }
                     VsdxShape.__static_initialize = function () { if (!VsdxShape.__static_initialized) {
@@ -10915,7 +11298,32 @@ var com;
                                     /* put */ (result["aspect"] = "fixed");
                                     var iType = (function (m, k) { return m[k] ? m[k] : null; })(imageData, "iType");
                                     var iData = (function (m, k) { return m[k] ? m[k] : null; })(imageData, "iData");
-                                    /* put */ (result["image"] = "data:image/" + iType + "," + iData);
+                                    
+                                    var imgOffsetX = parseFloat(this.getValue(this.getCellElement$java_lang_String('ImgOffsetX'), "0"));
+                                    var imgOffsetY = parseFloat(this.getValue(this.getCellElement$java_lang_String('ImgOffsetY'), "0"));
+                                    var imgWidth = parseFloat(this.getValue(this.getCellElement$java_lang_String('ImgWidth'), "0"));
+                                    var imgHeight = parseFloat(this.getValue(this.getCellElement$java_lang_String('ImgHeight'), "0"));
+                                    var width = parseFloat(this.getValue(this.getCellElement$java_lang_String('Width'), "0"));
+                                    var height = parseFloat(this.getValue(this.getCellElement$java_lang_String('Height'), "0"));
+                                    
+                                    if (imgOffsetX != 0 || imgOffsetY != 0)
+                                	{
+                                    	this.toBeCroppedImg = {
+                                			imgOffsetX: imgOffsetX, 
+                                			imgOffsetY: imgOffsetY, 
+                                			imgWidth: imgWidth, 
+                                			imgHeight: imgHeight,
+                                			width: width,
+                                			height: height,
+                                			iType: iType,
+                            				iData: iData
+                                    	};
+                                	}
+                                    else
+                                    {
+                                    	/* put */ (result["image"] = "data:image/" + iType + "," + iData);
+                                    }
+                                    
                                     return result;
                                 }
                                 var parsedGeom = this.parseGeom();
@@ -11386,7 +11794,12 @@ var com;
                         else {
                             return o1 === o2;
                         } })(lbkgnd, "")) {
-                            /* put */ (this.styleMap[mxConstants.STYLE_LABEL_BACKGROUNDCOLOR] = lbkgnd);
+                        	var isFullyTransparent = this.getValue(this.getCellElement$java_lang_String('TextBkgndTrans'), '0') == '1';
+                        	
+                        	if (!isFullyTransparent)
+                        	{
+                        		/* put */ (this.styleMap[mxConstants.STYLE_LABEL_BACKGROUNDCOLOR] = lbkgnd);
+                        	}
                         }
                         /* put */ (this.styleMap[mxConstants.STYLE_ROUNDED] = this.getRounding() > 0 ? com.mxgraph.io.vsdx.mxVsdxConstants.TRUE : com.mxgraph.io.vsdx.mxVsdxConstants.FALSE);
                         return this.styleMap;
@@ -12066,10 +12479,10 @@ EditorUi.prototype.doImportVisio = function(file, done, onerror, filename)
 	
 	if (filename != null && /(\.vs(x|sx?))($|\?)/i.test(filename))
 	{
-		new com.mxgraph.io.mxVssxCodec().decodeVssx(file, done, null, onerror);
+		new com.mxgraph.io.mxVssxCodec(this).decodeVssx(file, done, null, onerror);
 	}
 	else
 	{
-		new com.mxgraph.io.mxVsdxCodec().decodeVsdx(file, done, null, onerror);
+		new com.mxgraph.io.mxVsdxCodec(this).decodeVsdx(file, done, null, onerror);
 	}
 };

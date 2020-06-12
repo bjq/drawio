@@ -85,10 +85,12 @@ TrelloFile.prototype.doSave = function(title, success, error)
 	// Forces update of data for new extensions
 	var prev = this.meta.name;
 	this.meta.name = title;
-	DrawioFile.prototype.save.apply(this, arguments);
-	this.meta.name = prev;
 	
-	this.saveFile(title, false, success, error);
+	DrawioFile.prototype.save.apply(this, [null, mxUtils.bind(this, function()
+	{
+		this.meta.name = prev;
+		this.saveFile(title, false, success, error);
+	}), error]);
 };
 
 /**
@@ -106,6 +108,7 @@ TrelloFile.prototype.saveFile = function(title, revision, success, error)
 	else if (!this.savingFile)
 	{
 		this.savingFile = true;
+		this.savingFileTime = new Date();
 		
 		if (this.getTitle() == title)
 		{
@@ -127,6 +130,8 @@ TrelloFile.prototype.saveFile = function(title, revision, success, error)
 			
 			this.ui.trello.saveFile(this, mxUtils.bind(this, function(meta)
 			{
+				console.log('here');
+				
 				this.savingFile = false;
 				this.isModified = prevModified;
 				this.meta = meta;
