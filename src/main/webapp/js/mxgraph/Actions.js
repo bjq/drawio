@@ -224,6 +224,7 @@ Actions.prototype.init = function()
 		try
 		{
 			graph.setSelectionCells(graph.duplicateCells());
+			graph.scrollCellToVisible(graph.getSelectionCell());
 		}
 		catch (e)
 		{
@@ -391,13 +392,16 @@ Actions.prototype.init = function()
 						}
 					}
 					
-					var pt = graph.getFreeInsertPoint();
-            		var linkCell = new mxCell(title, new mxGeometry(pt.x, pt.y, 100, 40),
+            		var linkCell = new mxCell(title, new mxGeometry(0, 0, 100, 40),
 	            	    	'fontColor=#0000EE;fontStyle=4;rounded=1;overflow=hidden;' + ((icon != null) ?
 	            	    	'shape=label;imageWidth=16;imageHeight=16;spacingLeft=26;align=left;image=' + icon :
 	            	    	'spacing=10;'));
             	    linkCell.vertex = true;
 
+            	    var pt = graph.getCenterInsertPoint(graph.getBoundingBoxFromGeometry([linkCell], true));
+					linkCell.geometry.x = pt.x;
+            	    linkCell.geometry.y = pt.y;
+            	    
             	    graph.setLinkForCell(linkCell, link);
             	    graph.cellSizeUpdated(linkCell, true);
 
@@ -650,25 +654,29 @@ Actions.prototype.init = function()
 	}, null, null, Editor.ctrlKey + ' - (Numpad) / Alt+Mousewheel');
 	this.addAction('fitWindow', function()
 	{
-		var bounds = (graph.isSelectionEmpty()) ? graph.getGraphBounds() : graph.getBoundingBox(graph.getSelectionCells());
+		var bounds = (graph.isSelectionEmpty()) ? graph.getGraphBounds() :
+			graph.getBoundingBox(graph.getSelectionCells())
 		var t = graph.view.translate;
 		var s = graph.view.scale;
-		bounds.width /= s;
-		bounds.height /= s;
+		
 		bounds.x = bounds.x / s - t.x;
 		bounds.y = bounds.y / s - t.y;
-		
-		var cw = graph.container.clientWidth - 10;
-		var ch = graph.container.clientHeight - 10;
-		var scale = Math.floor(20 * Math.min(cw / bounds.width, ch / bounds.height)) / 20;
-		graph.zoomTo(scale);
+		bounds.width /= s;
+		bounds.height /= s;
 
-		if (mxUtils.hasScrollbars(graph.container))
+		if (graph.backgroundImage != null)
 		{
-			graph.container.scrollTop = (bounds.y + t.y) * scale -
-				Math.max((ch - bounds.height * scale) / 2 + 5, 0);
-			graph.container.scrollLeft = (bounds.x + t.x) * scale -
-				Math.max((cw - bounds.width * scale) / 2 + 5, 0);
+			bounds.add(new mxRectangle(0, 0, graph.backgroundImage.width, graph.backgroundImage.height));
+		}
+		
+		if (bounds.width == 0 || bounds.height == 0)
+		{
+			graph.zoomTo(1);
+			ui.resetScrollbars();
+		}
+		else
+		{
+			graph.fitWindow(bounds);
 		}
 	}, null, null, Editor.ctrlKey + '+Shift+H');
 	this.addAction('fitPage', mxUtils.bind(this, function()
@@ -1265,11 +1273,14 @@ Actions.prototype.init = function()
 			        		// Inserts new cell if no cell is selected
 			    			if (cells.length == 0)
 			    			{
-			    				var pt = graph.getFreeInsertPoint();
-			    				cells = [graph.insertVertex(graph.getDefaultParent(), null, '', pt.x, pt.y, w, h,
-			    						'shape=image;imageAspect=0;aspect=fixed;verticalLabelPosition=bottom;verticalAlign=top;')];
+			    				cells = [graph.insertVertex(graph.getDefaultParent(), null, '', 0, 0, w, h,
+			    					'shape=image;imageAspect=0;aspect=fixed;verticalLabelPosition=bottom;verticalAlign=top;')];
+			    				var pt = graph.getCenterInsertPoint(graph.getBoundingBoxFromGeometry(cells, true));
+								cells[0].geometry.x = pt.x;
+			            	    cells[0].geometry.y = pt.y;
+			            	    
 			    				select = cells;
-		            	    		graph.fireEvent(new mxEventObject('cellsInserted', 'cells', select));
+		            	    	graph.fireEvent(new mxEventObject('cellsInserted', 'cells', select));
 			    			}
 			    			
 			        		graph.setCellStyles(mxConstants.STYLE_IMAGE, (newValue.length > 0) ? newValue : null, cells);

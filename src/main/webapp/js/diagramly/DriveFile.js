@@ -178,29 +178,17 @@ DriveFile.prototype.saveFile = function(title, revision, success, error, unloadi
 		}
 		else if (!this.savingFile)
 		{
+			// Sets shadow modified state during save
+			this.savingFileTime = new Date();
+			this.setShadowModified(false);
 			this.savingFile = true;
 
 			this.createSecret(mxUtils.bind(this, function(secret, token)
 			{
 				var doSave = mxUtils.bind(this, function(realOverwrite, realRevision)
 				{
-					var prevModified = null;
-					var modified = null;
-					
 					try
 					{
-						// Makes sure no changes get lost while the file is saved
-						prevModified = this.isModified;
-						modified = this.isModified();
-						this.setModified(false);
-						this.savingFileTime = new Date();
-						
-						// Waits for success for modified state to be visible
-						this.isModified = function()
-						{
-							return true;
-						};
-	
 						var lastDesc = this.desc;
 	
 						this.ui.drive.saveFile(this, realRevision, mxUtils.bind(this, function(resp, savedData)
@@ -208,12 +196,14 @@ DriveFile.prototype.saveFile = function(title, revision, success, error, unloadi
 							try
 							{
 								this.savingFile = false;
-								this.isModified = prevModified;
 								
 								// Handles special case where resp is false eg
 								// if the old file was converted to realtime
 								if (resp != false)
 								{
+									// Checks for changes during save
+									this.setModified(this.getShadowModified());
+									
 									if (revision)
 									{
 										this.lastAutosaveRevision = new Date().getTime();
@@ -227,29 +217,31 @@ DriveFile.prototype.saveFile = function(title, revision, success, error, unloadi
 									
 									// Shows possible errors but keeps the modified flag as the
 									// file was saved but the cache entry could not be written
-									this.fileSaved(savedData, lastDesc, mxUtils.bind(this, function()
+									if (token != null)
 									{
-										this.contentChanged();
-										
-										if (success != null)
+										this.fileSaved(savedData, lastDesc, mxUtils.bind(this, function()
 										{
-											success(resp);
-										}
-									}), error, token);
-								}
-								else
-								{
-									this.setModified(modified || this.isModified());
-									
-									if (error != null)
-									{
-										error(resp);
+											this.contentChanged();
+											
+											if (success != null)
+											{
+												success(resp);
+											}
+										}), error, token);
 									}
+									else
+									{
+										success(resp);
+									}
+								}
+								else if (error != null)
+								{
+									error(resp);
 								}
 							}
 							catch (e)
 							{
-								this.setModified(modified || this.isModified());
+								this.savingFile = false;
 								
 								if (error != null)
 								{
@@ -265,9 +257,7 @@ DriveFile.prototype.saveFile = function(title, revision, success, error, unloadi
 							try
 							{
 								this.savingFile = false;
-								this.isModified = prevModified;
-								this.setModified(modified || this.isModified());
-							
+								
 								if (this.isConflict(err))
 								{
 									this.inConflictState = true;
@@ -275,7 +265,6 @@ DriveFile.prototype.saveFile = function(title, revision, success, error, unloadi
 									if (this.sync != null)
 									{
 										this.savingFile = true;
-										this.savingFileTime = new Date();
 										
 										this.sync.fileConflict(desc, mxUtils.bind(this, function()
 										{
@@ -283,12 +272,13 @@ DriveFile.prototype.saveFile = function(title, revision, success, error, unloadi
 											window.setTimeout(mxUtils.bind(this, function()
 											{
 												this.updateFileData();
+												this.setShadowModified(false);
 												doSave(realOverwrite, true);
 											}), 100 + Math.random() * 500);
 										}), mxUtils.bind(this, function()
 										{
 											this.savingFile = false;
-											
+							
 											if (error != null)
 											{
 												error();
@@ -307,8 +297,8 @@ DriveFile.prototype.saveFile = function(title, revision, success, error, unloadi
 							}
 							catch (e)
 							{
-								this.setModified(modified || this.isModified());
-								
+								this.savingFile = false;
+					
 								if (error != null)
 								{
 									error(e);
@@ -324,16 +314,6 @@ DriveFile.prototype.saveFile = function(title, revision, success, error, unloadi
 					{
 						this.savingFile = false;
 						
-						if (prevModified != null)
-						{
-							this.isModified = prevModified;
-						}
-						
-						if (modified != null)
-						{
-							this.setModified(modified || this.isModified());
-						}
-						
 						if (error != null)
 						{
 							error(e);
@@ -346,18 +326,6 @@ DriveFile.prototype.saveFile = function(title, revision, success, error, unloadi
 				});
 				
 				doSave(overwrite, revision);				
-			}), mxUtils.bind(this, function(e)
-			{
-				this.savingFile = false;
-				
-				if (error != null)
-				{
-					error(e);
-				}
-				else
-				{
-					throw e;
-				}
 			}));
 		}
 	}
@@ -506,6 +474,17 @@ DriveFile.prototype.move = function(folderId, success, error)
 			success(resp);
 		}
 	}), error);
+};
+
+/**
+ * Translates this point by the given vector.
+ * 
+ * @param {number} dx X-coordinate of the translation.
+ * @param {number} dy Y-coordinate of the translation.
+ */
+DriveFile.prototype.share = function()
+{
+	this.ui.drive.showPermissions(this.getId());
 };
 
 /**

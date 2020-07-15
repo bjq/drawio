@@ -43,7 +43,7 @@ function AttViewerEditor(onSubmit, getFileInfoFn, idSuffix, notStandalone, drawi
 	function showError(elem, errMsg)
 	{
 		elem.innerHTML = '<img src="data:image/gif;base64,R0lGODlhEAAQAPcAAADGAIQAAISEhP8AAP///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////yH5BAEAAAAALAAAAAAQABAAAAhoAAEIFBigYMGBCAkGGMCQ4cGECxtKHBAAYUQCEzFSHLiQgMeGHjEGEAAg4oCQJz86LCkxpEqHAkwyRClxpEyXGmGaREmTIsmOL1GO/DkzI0yOE2sKIMlRJsWhCQHENDiUaVSpS5cmDAgAOw==" border="0" align="absmiddle"/> ' + 
-			errMsg;
+					AC.htmlEntities(errMsg);
 	};
 	
 	function prevDrawioFile(doc, prevDiv, filename, aspect)
@@ -52,7 +52,7 @@ function AttViewerEditor(onSubmit, getFileInfoFn, idSuffix, notStandalone, drawi
 		
 		var container = document.createElement('div');
 		// NOTE: Height must be specified with default value "auto" to force automatic fit in viewer
-		container.style.cssText = 'position:absolute;width:100%;height:auto;bottom:0px;top:0px;border:1px solid transparent;';
+		container.style.cssText = 'position:absolute;width:auto;left:0px;right:0px;height:auto;bottom:0px;top:0px;border:1px solid transparent;';
 		prevDiv.appendChild(container);
 
 		var pageId, layerIds;
@@ -68,12 +68,23 @@ function AttViewerEditor(onSubmit, getFileInfoFn, idSuffix, notStandalone, drawi
 			}
 		}
 		
+		Graph.prototype.shadowId = 'attachmentDropShadow';
 		var viewer = new GraphViewer(container, doc.documentElement,
 				{highlight: '#3572b0', border: 8, 'auto-fit': true,
 				resize: false, nav: true, lightbox: false, title: filename,
 				'toolbar-nohide': true, 'toolbar-position': 'top', toolbar: 'pages layers',
 				pageId: pageId, layerIds: layerIds});
 
+		viewer.graph.addListener('size', function()
+		{
+			var root = this.view.getDrawPane().ownerSVGElement;
+			
+			if (root != null)
+			{
+				root.style.minHeight = '';
+			}
+		});
+		
 		curViewer = viewer;
 		
 		if (typeof AP != 'undefined')

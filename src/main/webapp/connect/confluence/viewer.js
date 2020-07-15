@@ -1,5 +1,15 @@
 (function()
 {
+	// Logs uncaught errors
+	EditorUi.enableLogging = true;
+	
+	window.onerror = function(message, url, linenumber, colno, err)
+	{
+		message = 'Confluence Cloud: ' + ((message != null) ? message : '');
+		
+		EditorUi.logError(message, url, linenumber, colno, err);
+	};
+
 	var EXPORT_URL = 'https://exp.draw.io/ImageExport4/export';
 	
 	// Enables dynamic loading of shapes and stencils (same domain)
@@ -36,6 +46,7 @@
 	var contentVer = getUrlParam('contentVer');
 	var linkedMode = getUrlParam('linked') == '1';
 	var diagramUrl = getUrlParam('diagramUrl');
+	var csvFileUrl = getUrlParam('csvFileUrl');
 	var inComment = getUrlParam('inComment') == '1';
 	var aspect = getUrlParam('aspect');
 	var imgPageId = getUrlParam('imgPageId');
@@ -382,6 +393,21 @@
 						                    });
 										};
 										
+										function monitorPopup(editWin)
+										{
+											if (editWin != null)
+											{
+												var checkClosedTimer = setInterval(function() 
+												{
+												    if (editWin.closed !== false) 
+												    {
+												        clearInterval(checkClosedTimer);
+												        location.reload();
+												    }
+												}, 200);
+											}
+										};
+										
 										var editFunc = function()
 										{
 											if (lightbox)
@@ -390,6 +416,24 @@
 											}
 											else
 											{
+												//We support editing Google Drive, OneDrive only
+												if (linkedMode)
+												{
+													var editWin = null;
+													
+													if (service == 'GDrive')
+													{
+														editWin = window.open('https://' + window.location.hostname + '/#G' + encodeURIComponent(sFileId));
+													}
+													else if (service == 'OneDrive')
+													{
+														editWin = window.open('https://' + window.location.hostname + '/#W' + encodeURIComponent(odriveId + '/' + sFileId));
+													}
+													
+													monitorPopup(editWin);
+													return;
+												}
+												
 												AP.dialog.create(
 								                {
 							                		key: 'customContentEditor',
@@ -430,7 +474,6 @@
 										};
 										
 										var commentsWindow = null;
-										var confUser = null;
 										
 										//Comments are only shown in lightbox mode
 										if (lightbox)
@@ -440,36 +483,25 @@
 											EditorUi.prototype.addTrees = function(){};
 									    	EditorUi.prototype.updateActionStates = function(){};
 									    	var editorUi = new EditorUi();
-											
-											editorUi.getCurrentUser = function()
-											{
-												if (confUser == null)
+									    	AC.loadPlugins(editorUi);
+									    	
+									    	//Plugins doesn't have callbacks, so we use this hack. TODO Improve this
+									    	function waitForUser()
+									    	{
+									    		if (editorUi.getCurrentUser().email == null)
+								    			{
+									    			setTimeout(waitForUser, 100);
+								    			}
+									    		else if (openComments) //Open the comments window here when the user is ready
 												{
-													AC.getCurrentUser(function(user)
-													{
-														confUser = new DrawioUser(user.id, user.email, user.displayName, user.pictureUrl);
-														
-														if (openComments) //Open the comments window here when the user is ready
-														{
-															openCommentsFunc();
-														}
-													}, function()
-													{
-														//ignore such that next call we retry
-													});
-													
-													//Return a dummy user until we have the actual user in order for UI to be populated
-													return new DrawioUser(Date.now(), null, mxResources.get('anonymous'));
+													openCommentsFunc();
 												}
-												
-												return confUser;
-											};
-											
-											//Prefetch current user 
-											editorUi.getCurrentUser();
+									    	}
+									    	
+									    	waitForUser();
 										}
 										
-										var openCommentsFunc = function()
+										var openCommentsFunc = function(e)
 										{
 											if (commentsWindow != null)
 											{
@@ -477,10 +509,21 @@
 											}
 											else
 											{
-												var confComments = null;
+												var busyIcon = null;
+												//Show busy icon
+												try
+												{
+													if (e && e.target)
+													{
+														busyIcon = document.createElement('img');
+														busyIcon.src = '/images/spin.gif';
+														e.target.parentNode.appendChild(busyIcon);
+													}
+												} catch(e){}
+												
 												var spaceKey, pageId, pageType, contentVer;
 												
-												function saveComments(comments, success, error)
+												editorUi.saveComments = function(comments, success, error)
 												{
 													AC.saveCustomContent(spaceKey, pageId, pageType, name, displayName, revision,
 			            									contentId, contentVer,
@@ -492,148 +535,39 @@
 			            										contentVer = content.version.number;
 			            										
 			            										success();
-			            									}, error, comments);
-												}
-												
-												editorUi.canComment = function()
-												{
-													return true; //We don't put restrictions on draw.io custom contents, so anyone can edit
+			            									}, error, comments, true);
 												};
 												
-												editorUi.commentsSupported = function()
+												function createCommentsWindow()
 												{
-													return true;
-												};
-												
-												editorUi.commentsRefreshNeeded = function()
-												{
-													return false;
-												};
-
-												editorUi.commentsSaveNeeded = function()
-												{
-													return false;
-												};
-
-												
-												editorUi.canReplyToReplies = function()
-												{
-													return true;
-												};
-												
-												function confCommentToDrawio(cComment, pCommentId)
-												{
-													if (cComment.isDeleted) return null; //skip deleted comments
+													commentsWindow = new CommentsWindow(editorUi, document.body.offsetWidth - 380, 120, 300, 350);
+													commentsWindow.window.setVisible(true);
+													//Lightbox Viewer has 999 zIndex
+													commentsWindow.window.getElement().style.zIndex = 2000;
 													
-													var comment = new DrawioComment(null, cComment.id, cComment.content, 
-															cComment.modifiedDate, cComment.createdDate, cComment.isResolved,
-															new DrawioUser(cComment.user.id, cComment.user.email,
-																	cComment.user.displayName, cComment.user.pictureUrl), pCommentId);
-													
-													for (var i = 0; cComment.replies != null && i < cComment.replies.length; i++)
+													if (busyIcon != null)
 													{
-														comment.addReplyDirect(confCommentToDrawio(cComment.replies[i], cComment.id));
-													}
-													
-													return comment;
-												};
-														
-												editorUi.getComments = function(success, error)
-												{
-													if (confComments == null)
-													{
-														AC.getComments(contentId, function(comments, spaceKey_p, pageId_p, pageType_p, contentVer_p)
-														{
-															spaceKey = spaceKey_p; pageId = pageId_p; pageType = pageType_p; contentVer = contentVer_p;
-															
-															confComments = [];
-															
-															for (var i = 0; i < comments.length; i++)
-															{
-																var comment = confCommentToDrawio(comments[i]);
-																
-																if (comment != null) confComments.push(comment);
-															}
-															
-															success(confComments);
-														}, error);
-													}
-													else
-													{
-														success(confComments);
+														busyIcon.parentNode.removeChild(busyIcon);
+														busyIcon = null;
 													}
 												};
-
-												editorUi.addComment = function(comment, success, error)
-												{
-													var tmpComments = JSON.parse(JSON.stringify(confComments));
-													comment.id = confUser.id + ':' + Date.now();
-													tmpComments.push(comment);
-													
-													saveComments(tmpComments, function()
-													{
-														success(comment.id);
-													}, error);
-												};
-														
-												editorUi.newComment = function(content, user)
-												{
-													return new DrawioComment(null, null, content, Date.now(), Date.now(), false, user); //remove file information
-												};
 												
-												//In Confluence, comments are part of the file (specifically custom contents), so needs to mark as changed with every change
-												DrawioComment.prototype.addReply = function(reply, success, error, doResolve, doReopen)
+												//Get current diagram information which is needed for comments
+												//TODO Viewer should use AC to load diagrams, then this won't be needed
+												AC.getAttachmentInfo(id, name, function(info)
 												{
-													reply.id = confUser.id + ':' + Date.now();
-													this.replies.push(reply);
-													var isResolved = this.isResolved;
-													
-													if (doResolve)
-													{
-														this.isResolved = true;
-													}
-													else if (doReopen)
-													{
-														this.isResolved = false;
-													}
-													
-													var tmpComments = JSON.parse(JSON.stringify(confComments));
-													this.replies.pop(); //Undo in case more changes are done before getting the reply
-													this.isResolved = isResolved;
-													
-													saveComments(tmpComments, function()
-													{
-														success(reply.id);
-													}, error);
-												};
-
-												DrawioComment.prototype.editComment = function(newContent, success, error)
+													AC.curDiagVer = info.version.number;
+													AC.curDiagId = info.id;
+												}, function()
 												{
-													var oldContent = this.content;
-													this.content = newContent;
-													var tmpComments = JSON.parse(JSON.stringify(confComments));
-													this.content = oldContent;
-													
-													saveComments(tmpComments, success, error);
-												};
-
-												DrawioComment.prototype.deleteComment = function(success, error)
-												{
-													var that = this;
-													this.isDeleted = true; //Mark as deleted since searching for this comment in the entire structure is complex. It will be cleaned in next save
-													var tmpComments = JSON.parse(JSON.stringify(confComments));
-													
-													saveComments(tmpComments, success, function(err) 
-													{
-														that.isDeleted = false;
-														error(err);
-													});
-												};
+													AC.curDiagId = false;
+												});
 												
-												commentsWindow = new CommentsWindow(editorUi, document.body.offsetWidth - 380, 120, 300, 350);
-												commentsWindow.window.setVisible(true);
-												//Lightbox Viewer has 999 zIndex
-												commentsWindow.window.getElement().style.zIndex = 2000;
+												editorUi.initComments(contentId, function(spaceKey_p, pageId_p, pageType_p, contentVer_p)
+												{
+													spaceKey = spaceKey_p; pageId = pageId_p; pageType = pageType_p; contentVer = contentVer_p;
+													createCommentsWindow();
+												}, createCommentsWindow);
 											}
 										};
 										
@@ -758,8 +692,10 @@
 											}
 											
 											
-											if (userCanEdit[id] != -1 //We treat 0 (unknown as allowed since anyway the editor will show an error on save) 
-													&& contentId != null && contentId.length > 0 && tbStyle != 'hidden' && !linkedMode && !isServiceDesk)
+											if ((userCanEdit[id] != -1 //We treat 0 (unknown as allowed since anyway the editor will show an error on save) 
+													&& contentId != null && contentId.length > 0 && tbStyle != 'hidden' && !linkedMode && !isServiceDesk) || 
+													
+													(service != null && service.length > 0 && service != 'AttFile'))
 											{
 												config.toolbar = 'edit ' + config.toolbar;
 												var editImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABUAAAAVBAMAAABbObilAAAAD1BMVEUAAAAAAAAQEBBycnIgICBqwj3hAAAAAXRSTlMAQObYZgAAADlJREFUCNdjoBwoChrAmCyGggJwYWVBBSiTSVDICKFa0AEuLCiEJKyAX5gBSZgBSZgBKGwMBKQ7HAAWzQSfKKAyBgAAAABJRU5ErkJggg==';
@@ -768,6 +704,36 @@
 												{
 													'edit': {title: mxResources.get('edit'), enabled: true,
 														image: editImage, handler: editFunc}
+												};
+											}
+											else if (linkedMode && contentId != null && contentId.length > 0)
+											{
+												config.toolbar = 'gotoPage ' + config.toolbar;
+												var gotoPageImg = 'data:image/png;base64,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'; 
+												
+												config['toolbar-buttons'] = 
+												{
+													'gotoPage': {title: mxResources.get('confGotoPage'), enabled: true,
+														image: gotoPageImg, handler: function()
+														{
+															//Check if the parent page has its macro
+															AC.findMacroInPage(id, name, false, function(macroFound, originalBody, matchingMacros, page)
+															{
+																var editWin = null;
+																var spaceKey = page._expandable && page._expandable.space? page._expandable.space.substr(page._expandable.space.lastIndexOf('/') + 1) : '';
+																
+																if (macroFound)
+																{
+																	editWin = window.open(baseUrl + '/spaces/' + encodeURIComponent(spaceKey) + '/pages/edit/' + id);
+																}
+																else
+																{
+																	editWin = window.open(baseUrl + '/pages/viewpageattachments.action?pageId=' + id + '&activeContentType=ac:com.mxgraph.confluence.plugins.diagramly:drawio-diagram');
+																}
+																
+																monitorPopup(editWin);
+															});
+														}}
 												};
 											}
 											
@@ -884,7 +850,7 @@
 													{
 														if (imageData != null)
 														{
-															AC.saveDiagram(imgPageId, name + '-' + aspectHash + '.png', AC.b64toBlob(imageData, 'image/png'),
+															AC.saveDiagram(imgPageId, name + (aspectHash? '-' + aspectHash : '') + '.png', AC.b64toBlob(imageData, 'image/png'),
 																	ignoreFn, ignoreFn, false, 'image/png', 'draw.io aspect image' + (curAttVer != null? ' - ' + curAttVer : ''), false, false);
 														}
 													};
@@ -919,30 +885,91 @@
 												
 												function ignoreFn(){};
 												
-												if (service != null)
+												function renderAndCache(newXml, timestamp, isPng)
 												{
-													function renderAndCache(newXml, timestamp, isPng)
+													if (isPng)
 													{
-														if (isPng)
+														newXml = 'data:image/png;base64,' + Editor.base64Encode (newXml);
+														newXml = AC.extractGraphModelFromPng(newXml);
+													}
+													
+		            								//render diagram
+		            								viewer.setXmlNode(mxUtils.parseXml(newXml).documentElement);
+		            								//Apply aspect (layers) again
+		            								viewer.showLayers(viewer.graph);
+		            								//Update xml (used for server rendering)
+		            								xml = newXml;
+		            								//Save diagram
+		            								AC.saveDiagram(id, name, newXml,
+		            										updateImage, function(resp)
+		            										{
+		            											showError(mxResources.get('confSaveCacheFailed'));
+		            										}, false, 'application/vnd.jgraph.mxfile.cached', 'Embedded draw.io diagram' + (timestamp? ' - ' + timestamp : ''), false, false);
+												};
+												
+												if (csvFileUrl)
+												{
+													var cachedCsv, curCsv;
+													
+													function checkCsvChange()
+													{
+														if (cachedCsv != null && curCsv != null && cachedCsv != curCsv)
 														{
-															newXml = 'data:image/png;base64,' + Editor.base64Encode (newXml);
-															newXml = AC.extractGraphModelFromPng(newXml);
-														}
-														
-			            								//render diagram
-			            								viewer.setXmlNode(mxUtils.parseXml(newXml).documentElement);
-			            								//Apply aspect (layers) again
-			            								viewer.showLayers(viewer.graph);
-			            								//Update xml (used for server rendering)
-			            								xml = newXml;
-			            								//Save diagram
-			            								AC.saveDiagram(id, name, newXml,
-			            										updateImage, function(resp)
+															AC.importCsv(curCsv, function(csvModel, xml)
+															{
+																AC.saveDiagram(id, name + '.csv', curCsv,
+			            										function()
 			            										{
-			            											showError(mxResources.get('confSaveCacheFailed'));
-			            										}, false, 'application/vnd.jgraph.mxfile.cached', 'Embedded draw.io diagram - ' + timestamp, false, false);
+																	renderAndCache(xml);
+			            										}, function()
+			            										{
+			            											console.log('Cachinng csv file failed durinng saving');
+			            										}, false, 'text/csv', 'Embedded draw.io diagram (CSV)', false, false);
+															},
+															function()
+															{
+																console.log('Fetched csv file has invalid format');
+															});
+														}
 													};
 													
+													//Fetch csv file and re-generate if changed (Ignore errors and log them only)
+													AP.request(
+													{
+														url: '/download/attachments/' + id + '/' + encodeURIComponent(name + '.csv'),
+														success: function(csv) 
+														{
+															cachedCsv = csv;
+															checkCsvChange();
+														},
+														error: function()
+														{
+															cachedCsv = ""; //Force re-generation
+															checkCsvChange();
+														}
+													});
+													
+													mxUtils.get(csvFileUrl, function(req) 
+													{
+														if (req.getStatus() >= 200 && req.getStatus() <= 299)
+														{
+															curCsv = req.getText();
+															checkCsvChange();
+														}
+														else
+														{
+															console.log('Failed to fetch csv file from ' + csvFileUrl + ' Error: ' + req.getStatus());
+														}
+													}, function()
+													{
+														console.log('Failed to fetch csv file from ' + csvFileUrl);
+													}, false, 25000, function()
+												    {
+														console.log('Failed to fetch csv file (timeout) from ' + csvFileUrl);
+												    });
+												}
+												else if (service != null)
+												{
 													if (service == 'GDrive')
 													{
 														GAC.getFileInfo(sFileId, function(fileInfo)
@@ -1063,128 +1090,28 @@
 												}
 											}
 											
-											AC.getComments(contentId, function(comments)
+											//If there are comments, show the comments icon
+											function addCommentsIcon()
 											{
-												var hasUnresolvedComments = false;
-												
-												for (var i = 0; i < comments.length; i++)
+												var commentsIcon = document.createElement('img');
+												commentsIcon.style.cssText = 'position:absolute;bottom: 5px; right: 5px;opacity: 0.25; cursor: pointer';
+												commentsIcon.setAttribute('title', mxResources.get('showComments'));
+												commentsIcon.src = Editor.commentImage;
+												commentsIcon.addEventListener('click', function() 
 												{
-													if (!comments[i].isDeleted && !comments[i].isResolved)
-													{
-														hasUnresolvedComments = true;
-														break;
-													}
-												}
-												
-												//If there are comments, show the comments icon
+													viewer.showLightbox(true);
+												});
+												container.appendChild(commentsIcon);
+											};
+											
+											AC.hasUnresolvedComments(id, contentId, name, function(hasUnresolvedComments)
+											{
 												if (hasUnresolvedComments)
 												{
-													var commentsIcon = document.createElement('img');
-													commentsIcon.style.cssText = 'position:absolute;bottom: 5px; right: 5px;opacity: 0.25; cursor: pointer';
-													commentsIcon.setAttribute('title', mxResources.get('showComments'));
-													commentsIcon.src = Editor.commentImage;
-													commentsIcon.addEventListener('click', function() 
-													{
-														viewer.showLightbox(true);
-													});
-													container.appendChild(commentsIcon);
+													addCommentsIcon();
 												}
-											}, function(){});//Nothing to do in case of an error
+											}, function(){}); //Nothing to do in case of an error
 										}
-										//Confirm that the macro is in sync with the diagram
-										//Sometimes the diagram is saved but the macro is not updated
-										var attInfo = null;
-										var pageInfo = null;
-										
-										function confirmDiagramInSync()
-										{
-											if (attInfo == null || pageInfo == null) 
-												return;
-											
-											var loadedVer = parseInt(revision);
-											
-											//TODO is this condition enough or we need to check timestamps also?
-											if (attInfo.version.number > loadedVer 
-													&& (pageInfo.version.message == null || pageInfo.version.message.indexOf("Reverted") < 0)) 
-											{
-												showDiagram(id, backupId, name, attInfo.version.number + '', links, {dontCheckVer: true}, displayName, contentId, null, null, aspects);
-												//I think updating macro here is too risky since calling confluence.getMacroData returns null
-											}
-										}
-										
-										//This fix contradict with copy/paste workflow where all diagrams have the same name
-										//On copy/paste diagram name must be changed
-										/*if (!retryParams.dontCheckVer && revision != null && revision.length > 0)
-										{
-						                    AP.request({
-						                        type: 'GET',
-						                        url: '/rest/api/content/' + id + '?expand=version',
-						                        contentType: 'application/json;charset=UTF-8',
-						                        success: function (resp) 
-						                        {
-						                        	pageInfo = JSON.parse(resp);
-						                            
-						                        	confirmDiagramInSync();
-						                        },
-						                        error: function (resp) 
-						                        {
-						                            //Ignore
-						                        }
-						                    });
-	
-						                    AP.request({
-						                        type: 'GET',
-						                        url: '/rest/api/content/' + id + '/child/attachment?filename=' + 
-						                        		encodeURIComponent(name) + '&expand=version',
-						                        contentType: 'application/json;charset=UTF-8',
-						                        success: function (resp) 
-						                        {
-						                        	var tmp = JSON.parse(resp);
-						                            
-						                        	if (tmp.results && tmp.results.length == 1)
-						                        	{
-						                        		attInfo = tmp.results[0];
-						                        	}
-						                        	
-						                        	confirmDiagramInSync();
-						                        },
-						                        error: function (resp) 
-						                        {
-						                            //Ignore
-						                        }
-						                    });
-										}*/
-										
-										//Saving the diagram to this page negates page linking feature!
-										//May be we should ask the user first or saving is not needed all together
-										/*if (retryParams.saveIt)
-										{
-								 			//Since attachment wasn't found in this page, it is better to save it to this page
-								 			//First load AC dynamically. Since AC is not needed in the viewer except for this case
-							 				var head = document.getElementsByTagName('head')[0];
-											var script = document.createElement('script');
-											script.setAttribute('data-options', 'resize:false;margin:false');
-											
-											// Main
-											script.onload = function()
-											{
-												//save diagram
-												AC.saveDiagram(retryParams.pageId, name, xml,
-												function()
-												{
-													//nothing!
-												}, 
-												function()
-												{
-													//nothing!
-												}, false, 'application/vnd.jgraph.mxfile', 'Diagram imported by Draw.io', false, false);
-												
-												//TODO save preview png
-												//This requires an editor to do the png export, may be a canvas can be used with supported browsers
-											};
-											script.src = 'connectUtils-1-4-8.js';
-											head.appendChild(script);
-										}*/
 							 		}
 								},
 								error: function (err)
@@ -1340,6 +1267,7 @@
 				}
 				else
 				{
+					//TODO We cache diagramUrl file now, so handle its change detection and caching if the file doesn't exists
 					if (diagramUrl)
 					{
 						showExtDiagram(diagramName, diagramUrl);				

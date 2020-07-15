@@ -43,7 +43,7 @@ function OneDriveEditor(onSubmit, getFileInfoFn, idSuffix, notStandalone, drawio
 	function showError(elem, errMsg)
 	{
 		elem.innerHTML = '<img src="data:image/gif;base64,R0lGODlhEAAQAPcAAADGAIQAAISEhP8AAP///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////yH5BAEAAAAALAAAAAAQABAAAAhoAAEIFBigYMGBCAkGGMCQ4cGECxtKHBAAYUQCEzFSHLiQgMeGHjEGEAAg4oCQJz86LCkxpEqHAkwyRClxpEyXGmGaREmTIsmOL1GO/DkzI0yOE2sKIMlRJsWhCQHENDiUaVSpS5cmDAgAOw==" border="0" align="absmiddle"/> ' + 
-			errMsg;
+					AC.htmlEntities(errMsg);
 	};
 	
 	function setPreview(file)
@@ -97,7 +97,7 @@ function OneDriveEditor(onSubmit, getFileInfoFn, idSuffix, notStandalone, drawio
 			}
 		}, function(errMsg)
 		{
-			prevDiv.innerHTML = 'No preview is available. ' + (errMsg? errMsg : '');
+			prevDiv.innerHTML = 'No preview is available. ' + AC.htmlEntities(errMsg? errMsg : '');
 		});
 		
 		var autoSizeCheck = AC.$('#autoSize' + idSuffix);
@@ -116,7 +116,7 @@ function OneDriveEditor(onSubmit, getFileInfoFn, idSuffix, notStandalone, drawio
 
 		var container = document.createElement('div');
 		// NOTE: Height must be specified with default value "auto" to force automatic fit in viewer
-		container.style.cssText = 'position:absolute;width:100%;height:auto;bottom:0px;top:0px;border:1px solid transparent;';
+		container.style.cssText = 'position:absolute;width:auto;left:0px;right:0px;height:auto;bottom:0px;top:0px;border:1px solid transparent;';
 		prevDiv.appendChild(container);
 
 		var pageId, layerIds;
@@ -132,12 +132,23 @@ function OneDriveEditor(onSubmit, getFileInfoFn, idSuffix, notStandalone, drawio
 			}
 		}
 		
+		Graph.prototype.shadowId = 'oneDriveDropShadow';
 		var viewer = new GraphViewer(container, doc.documentElement,
 				{highlight: '#3572b0', border: 8, 'auto-fit': true,
 				resize: false, nav: true, lightbox: false, title: filename,
 				'toolbar-nohide': true, 'toolbar-position': 'top', toolbar: 'pages layers',
 				pageId: pageId, layerIds: layerIds});
-
+		
+		viewer.graph.addListener('size', function()
+		{
+			var root = this.view.getDrawPane().ownerSVGElement;
+			
+			if (root != null)
+			{
+				root.style.minHeight = '';
+			}
+		});
+		
 		curViewer = viewer;
 		
 		if (typeof AP != 'undefined')
@@ -309,10 +320,7 @@ function OneDriveEditor(onSubmit, getFileInfoFn, idSuffix, notStandalone, drawio
 							}, handleNonDrawFile);
 						}, handleNonDrawFile);
 					}
-					//Handle draw.io potential files (html & xml)
-					else if (useDrawio || mimeType == 'text/html' || mimeType == 'text/xml' || mimeType == 'application/xml' || mimeType == 'image/png' 
-							|| /\.svg$/i.test(file.name) || /\.html$/i.test(file.name) || /\.xml$/i.test(file.name) 
-							|| /\.png$/i.test(file.name) || /\.drawio$/i.test(file.name))
+					else
 					{
 						AC.checkDrawioFile(file, function(doc, cnt)
 						{
@@ -321,10 +329,6 @@ function OneDriveEditor(onSubmit, getFileInfoFn, idSuffix, notStandalone, drawio
 							drawioCheck.checked = true;
 							setAutosize();
 						}, handleNonDrawFile);
-					}
-					else
-					{
-						handleNonDrawFile();
 					}
 				});
 				

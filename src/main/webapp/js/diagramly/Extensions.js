@@ -3324,10 +3324,10 @@ LucidImporter = {};
 			'AWSCloudaltAWS19_v2' : 'shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud_alt;verticalAlign=top;align=left;spacingLeft=30;fillOpacity=100;fillColor=none',
 			'RegionAWS19_v2' : 'shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_region;verticalAlign=top;align=left;spacingLeft=30;fillOpacity=100;dashed=1;fontColor=#0E82B8;fillColor=none',
 			'AvailabilityZoneAWS19_v2' : 'verticalAlign=top;fillColor=none;fillOpacity=100;dashed=1;dashPattern=5 5;fontColor=#0E82B8',
-			'SecuritygroupAWS19_v2' : 'verticalAlign=top;fillColor=none;fillOpacity=100;fontColor=#DD3522',
+			'SecuritygroupAWS19_v2' : 'verticalAlign=top;fillColor=none;fillOpacity=100',
 			'AutoScalingAWS19_v2' : 'shape=mxgraph.aws4.groupCenter;grIcon=mxgraph.aws4.group_auto_scaling_group;grStroke=1;verticalAlign=top;fillColor=none;fillOpacity=100;fontColor=#D75F17;spacingTop=25;fillColor=none',
 			'VirtualprivatecloudVPCAWS19_v2' : 'shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc;verticalAlign=top;align=left;spacingLeft=30;fillOpacity=100;fontColor=#2C8723;fillColor=none',
-			'PrivateSubnetAWS19_v2' : 'shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;grStroke=0;verticalAlign=top;align=left;spacingLeft=30;fillOpacity=100;strokeColor=#0E82B8;fontColor=#0E82B8;fillColor=none',
+			'PrivateSubnetAWS19_v2' : 'shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;grStroke=0;verticalAlign=top;align=left;spacingLeft=30;fillOpacity=100;strokeColor=#0E82B8;fillColor=none',
 			'PublicSubnetAWS19_v2' : 'shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;grStroke=0;verticalAlign=top;align=left;spacingLeft=30;fillOpacity=100;strokeColor=#2C8723;fontColor=#2C8723;fillColor=none',
 			'ServercontentsAWS19_v2' : 'shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_on_premise;verticalAlign=top;align=left;spacingLeft=30;fillOpacity=100;fontColor=#5A6C86;fillColor=none',
 			'CorporatedatacenterAWS19_v2' : 'shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_corporate_data_center;verticalAlign=top;align=left;spacingLeft=30;fillOpacity=100;fontColor=#5A6C86;fillColor=none',
@@ -3336,7 +3336,7 @@ LucidImporter = {};
 			'SpotFleetAWS19_v2' : 'shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_spot_fleet;verticalAlign=top;align=left;spacingLeft=30;fillOpacity=100;fontColor=#D75F17;fillColor=none',
 			'AWSStepFunctionAWS19_v2' : 'shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_step_functions_workflow;verticalAlign=top;align=left;spacingLeft=30;fillOpacity=100;fontColor=#CB1261;fillColor=none',
 			'GenericGroup1AWS19_v2' : 'verticalAlign=top;align=center;fillColor=none;fillOpacity=100;dashed=1;dashPattern=5 5;strokeColor=#5A6C86;fontColor=#5A6C86',
-			'GenericGroup2AWS19_v2' : 'verticalAlign=top;align=center;fillOpacity=100;fillColor=#EAECEF',
+			'GenericGroup2AWS19_v2' : 'verticalAlign=top;align=center',
 
 			//Repeated from the above
 			'AWSCloudAWS19' : 'shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;verticalAlign=top;align=left;spacingLeft=30;fillOpacity=100;fillColor=none',
@@ -4960,15 +4960,27 @@ LucidImporter = {};
 	
 	function getImage(properties, action)
 	{
+		var imgUrl = null;
+		
 		// Converts images
 		if (action.Class == 'ImageSearchBlock2')
 		{
-			return 'image=' + properties.URL + ';';
+			imgUrl = properties.URL;
 		}
 		else if (action.Class == 'UserImage2Block' && properties.ImageFillProps != null &&
 				properties.ImageFillProps.url != null)
 		{
-			return 'image=' + properties.ImageFillProps.url  + ';';
+			imgUrl = properties.ImageFillProps.url;
+		}
+		
+		if (imgUrl != null)
+		{
+			if (LucidImporter.imgSrcMap != null && LucidImporter.imgSrcMap[imgUrl] != null)
+			{
+				imgUrl = LucidImporter.imgSrcMap[imgUrl];
+			}
+			
+			return 'image=' + imgUrl + ';';
 		}
 		
 		return '';
@@ -5125,7 +5137,7 @@ LucidImporter = {};
 					
 					if (p.Shape != 'diagonal')
 					{
-						if (p.ElbowPoints != null)
+						if (p.ElbowPoints != null && p.ElbowPoints.length > 0)
 						{
 							cell.geometry.points = [];
 							
@@ -5188,7 +5200,7 @@ LucidImporter = {};
 						}
 					}
 
-					var waypoints = p.ElbowControlPoints || p.Joints;
+					var waypoints = p.ElbowControlPoints || p.BezierJoints || p.Joints;
 					
 					if (waypoints != null)
 					{
@@ -5196,7 +5208,7 @@ LucidImporter = {};
 						
 						for (var i = 0; i < waypoints.length; i++)
 						{
-							var pt = waypoints[i];
+							var pt = waypoints[i].p ? waypoints[i].p : waypoints[i];
 							
 							cell.geometry.points.push(new mxPoint(
 								Math.round(pt.x * scale + dx),
@@ -5219,7 +5231,10 @@ LucidImporter = {};
 							dx = (exit.x == entry.x) ? 20 : 0;
 							dy = (exit.y == entry.y) ? 0 : 0;
 							
-							cell.geometry.points = [new mxPoint(exit.x + dx, exit.y + dy), new mxPoint(entry.x + dx, entry.y + dy)];
+							var p1 = new mxPoint(exit.x + dx, exit.y + dy), p2 = new mxPoint(entry.x + dx, entry.y + dy);
+							p1.generated = true;
+							p2.generated = true;
+							cell.geometry.points = [p1, p2];
 							implicitX = (exit.y == entry.y);
 							implicitY = (exit.x == entry.x);
 						}
@@ -5417,39 +5432,19 @@ LucidImporter = {};
 		}
 	};
 
-	var hideObj = function(key, groups, hidden)
-	{
-		if (mxUtils.indexOf(hidden, key) < 0)
-		{
-			hidden.push(key);
-		}
-
-		if (key in groups)
-		{
-			var obj = groups[key];
-			obj.id = key;
-			
-			if (obj.Members != null)
-			{
-				for (var key2 in obj.Members)
-				{
-					hidden = hideObj(key2, groups, hidden);
-				}
-			}
-		
-		}
-		
-		return hidden;
-	};
-	
-	function createGroup(obj, lookup)
+	function createGroup(obj, lookup, edgesGroups)
 	{
 		try
 		{
+			if (obj.Action != null && obj.Action.Properties != null)
+			{
+				obj = obj.Action.Properties;
+			}
+			
 			var group = new mxCell('', new mxGeometry(), 'group;dropTarget=0;');
 			group.vertex = true;
 			var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-			var members = obj.Members || obj.Action.Properties.Members;
+			var members = obj.Members;
 				
 			for (var key in members)
 			{
@@ -5461,10 +5456,14 @@ LucidImporter = {};
 					minY = Math.min(minY, v.geometry.y);
 					maxX = Math.max(maxX, v.geometry.x + v.geometry.width);
 					maxY = Math.max(maxY, v.geometry.y + v.geometry.height);
+					v.parent = group;
+					group.insert(v);
 				}
-				
-				v.parent = group;
-				group.insert(v);
+				else
+				{
+					//Edges are not yet created, so, create a map for them
+					edgesGroups[key] = group;
+				}
 			}
 			
 			group.geometry.x = minX;
@@ -5477,6 +5476,19 @@ LucidImporter = {};
 				var geo = group.children[i].geometry;
 				geo.x -= minX;
 				geo.y -= minY;
+			}
+			
+			if (obj.IsState)
+			{
+				group.lucidLayerInfo = {
+					name: obj.Name,
+					visible: !obj.Hidden,
+					locked: obj.Restrictions.b && obj.Restrictions.p && obj.Restrictions.c
+				};
+			}
+			else if (obj.Hidden)
+			{
+				group.visible = false;
 			}
 			
 			return group;
@@ -5494,34 +5506,9 @@ LucidImporter = {};
 		{
 			var select = [];
 			var lookup = {};
+			var edgesGroups = {};
 			var queue = [];
 
-			//collect IDs that are part of groups and hidden
-			var hidden = [];
-			var i = 0;
-			
-			if (g.Groups != null)
-			{
-				for (var key in g.Groups)
-				{
-					var obj = g.Groups[key];
-					obj.id = key;
-					
-					if (obj.Hidden == true && obj.Members != null)
-					{
-						if (mxUtils.indexOf(hidden, key) < 0)
-						{
-							hidden.push(key);
-						}
-
-						for (var key2 in obj.Members)
-						{
-							hidden = hideObj(key2, g.Groups, hidden);
-						}
-					}
-				}
-			}
-			
 			// Vertices first (populates lookup table for connecting edges)
 			if (g.Blocks != null)
 			{
@@ -5530,25 +5517,22 @@ LucidImporter = {};
 					var obj = g.Blocks[key];
 					obj.id = key;
 					
-					if (mxUtils.indexOf(hidden, key) < 0)
+					var created = false;
+					
+					if (styleMap[obj.Class] != null)
 					{
-						var created = false;
-						
-						if (styleMap[obj.Class] != null)
+						if (styleMap[obj.Class] == 'mxCompositeShape')
 						{
-							if (styleMap[obj.Class] == 'mxCompositeShape')
-							{
-								lookup[obj.id] = addCompositeShape(obj, select, graph);
-								queue.push(obj);
-								created = true;
-							}
-						}
-						
-						if (!created)
-						{
-							lookup[obj.id] = createVertex(obj, graph);
+							lookup[obj.id] = addCompositeShape(obj, select, graph);
 							queue.push(obj);
+							created = true;
 						}
+					}
+					
+					if (!created)
+					{
+						lookup[obj.id] = createVertex(obj, graph);
+						queue.push(obj);
 					}
 				}
 			}
@@ -5584,7 +5568,7 @@ LucidImporter = {};
 					
 					if (obj.IsGroup)
 					{
-						var group = createGroup(obj, lookup);
+						var group = createGroup(obj, lookup, edgesGroups);
 						
 						if (group)
 						{
@@ -5595,7 +5579,7 @@ LucidImporter = {};
 				}
 			}
 			
-			//Create non-hidden groups
+			//Create groups
 			if (g.Groups != null)
 			{
 				try
@@ -5605,15 +5589,12 @@ LucidImporter = {};
 						var obj = g.Groups[key];
 						obj.id = key;
 
-						if (obj.Hidden == 0 && obj.Members != null)
+						var group = createGroup(obj, lookup, edgesGroups);
+						
+						if (group)
 						{
-							var group = createGroup(obj, lookup);
-							
-							if (group)
-							{
-								lookup[obj.id] = group;
-								queue.push(obj);	
-							}
+							lookup[obj.id] = group;
+							queue.push(obj);	
 						}
 					}
 				}
@@ -5627,13 +5608,10 @@ LucidImporter = {};
 			{
 				for (var key in g.Lines)
 				{
-					if (mxUtils.indexOf(hidden, key) < 0)
-					{
-						var obj = g.Lines[key];
-						obj.id = key;
-						
-						queue.push(obj);
-					}
+					var obj = g.Lines[key];
+					obj.id = key;
+					
+					queue.push(obj);
 				}
 			}
 			
@@ -5667,7 +5645,36 @@ LucidImporter = {};
 						Math.round(p.Endpoint2.y * scale)), false);
 				}
 				
-				select.push(graph.addCell(e, null, null, src, trg));
+				var group = edgesGroups[obj.id];
+				
+				function fixPoint(p, pgeo)
+				{
+					if (p != null && !p.generated)
+					{
+						p.x -= pgeo.x;
+						p.y -= pgeo.y;
+					}
+				};
+				
+				if (group != null)
+				{
+					//Correct edge geometry
+					var geo = e.geometry, pgeo = group.geometry;
+					fixPoint(geo.sourcePoint, pgeo);
+					fixPoint(geo.targetPoint, pgeo);
+					fixPoint(geo.offset, pgeo);
+                    var points = geo.points;
+                    
+                    if (points != null) 
+                    {
+                        for (var i = 0; i < points.length; i++) 
+                        {
+                        	fixPoint(points[i], pgeo);
+                        }
+                    }
+				}
+				
+				select.push(graph.addCell(e, group, null, src, trg));
 			};
 			
 			// Inserts cells in ZOrder and connects edges via lookup
@@ -5680,7 +5687,26 @@ LucidImporter = {};
 				{
 					if (v.parent == null)
 					{
-						select.push(graph.addCell(v));
+						if (v.lucidLayerInfo)
+						{
+							var layerCell = new mxCell();
+					        graph.addCell(layerCell, graph.model.root);
+					        
+					        layerCell.setVisible(v.lucidLayerInfo.visible);
+
+					        if (v.lucidLayerInfo.locked)
+					        {
+					            layerCell.setStyle("locked=1;");
+					        }
+					        
+					        layerCell.setValue(v.lucidLayerInfo.name);
+					        delete v.lucidLayerInfo;
+					        graph.addCell(v, layerCell);
+						}
+						else
+						{
+							select.push(graph.addCell(v));
+						}
 					}
 				}
 				else if (obj.IsLine && obj.Action != null && obj.Action.Properties != null)
@@ -5732,8 +5758,9 @@ LucidImporter = {};
         return graph;
 	};
 	
-	LucidImporter.importState = function(state)
+	LucidImporter.importState = function(state, imgSrcMap)
 	{
+		LucidImporter.imgSrcMap = imgSrcMap; //Use LucidImporter object to store the map since it is used deep inside
 		var xml = ['<?xml version=\"1.0\" encoding=\"UTF-8\"?>', '<mxfile>'];
 		
 		// Extracts and sorts all pages
@@ -5802,6 +5829,7 @@ LucidImporter = {};
 		}
 		
 		xml.push('</mxfile>');
+		LucidImporter.imgSrcMap = null; //Reset the map so it doesn't affect next calls
 		
 		return xml.join('');
 	};
@@ -11061,12 +11089,14 @@ LucidImporter = {};
 					var item = new Array();
 					var divider = new Array();
 					var currH = th / h;
+					var curY = th;
 					
 					for (var i = 0; i <= p.Attributes; i++)
 					{
 						if (i > 0)
 						{
-							divider[i] = new mxCell('', new mxGeometry(0, 0, 40, 8), 'line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;');
+							divider[i] = new mxCell('', new mxGeometry(0, curY, 40, 8), 'line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;');
+							curY += 8;
 							divider[i].vertex = true;
 							v.insert(divider[i]);
 						}
@@ -11094,7 +11124,9 @@ LucidImporter = {};
 						
 						var extH = p.ExtraHeightSet && i == 1? (p.ExtraHeight * scale) : 0;
 						
-						item[i] = new mxCell('', new mxGeometry(0, 0, w, Math.round((h - th) * itemH) + extH), 'part=1;html=1;resizeHeight=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;');
+						var curH = Math.round((h - th) * itemH) + extH;
+						item[i] = new mxCell('', new mxGeometry(0, curY, w, curH), 'part=1;html=1;resizeHeight=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;');
+						curY += curH;
 						item[i].vertex = true;
 						v.insert(item[i]);
 						item[i].style += st +
@@ -11143,12 +11175,14 @@ LucidImporter = {};
 				
 				var item = new Array();
 				var currH = th / h;
+				var curY = th;
 				
 				for (var i = 0; i < p.Fields; i++)
 				{
 					var itemH = 0;
-					
-					item[i] = new mxCell('', new mxGeometry(0, 0, w, p['Field' + (i + 1) + '_h'] * scale), 'part=1;resizeHeight=0;strokeColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;');
+					var curH = p['Field' + (i + 1) + '_h'] * scale;
+					item[i] = new mxCell('', new mxGeometry(0, curY, w, curH), 'part=1;resizeHeight=0;strokeColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;');
+					curY += curH;
 					item[i].vertex = true;
 					v.insert(item[i]);
 					item[i].style += st +

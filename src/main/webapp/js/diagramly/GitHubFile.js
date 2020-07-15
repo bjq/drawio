@@ -19,6 +19,19 @@ mxUtils.extend(GitHubFile, DrawioFile);
  * @param {number} dx X-coordinate of the translation.
  * @param {number} dy Y-coordinate of the translation.
  */
+GitHubFile.prototype.share = function()
+{
+	this.ui.editor.graph.openLink('https://github.com/' +
+		encodeURIComponent(this.meta.org) + '/' +
+		encodeURIComponent(this.meta.repo) +'/settings/access');
+};
+
+/**
+ * Translates this point by the given vector.
+ * 
+ * @param {number} dx X-coordinate of the translation.
+ * @param {number} dy Y-coordinate of the translation.
+ */
 GitHubFile.prototype.getId = function()
 {
 	return encodeURIComponent(this.meta.org) + '/' +
@@ -222,36 +235,21 @@ GitHubFile.prototype.saveFile = function(title, revision, success, error, unload
 		{
 			if (this.getTitle() == title)
 			{
-				var prevModified = null;
-				var modified = null;
-				
 				try
 				{
-					// Makes sure no changes get lost while the file is saved
-					prevModified = this.isModified;
-					modified = this.isModified();
-					this.savingFile = true;
+					// Sets shadow modified state during save
 					this.savingFileTime = new Date();
+					this.setShadowModified(false);
+					this.savingFile = true;
 						
-					// Makes sure no changes get lost while the file is saved
-					var prepare = mxUtils.bind(this, function()
-					{
-						this.setModified(false);
-						
-						this.isModified = function()
-						{
-							return modified;
-						};
-					});
-					
 					var savedEtag = this.getCurrentEtag();
 					var savedData = this.data;
-					prepare();
 
 					this.peer.saveFile(this, mxUtils.bind(this, function(etag)
 					{
+						// Checks for changes during save
+						this.setModified(this.getShadowModified());
 						this.savingFile = false;
-						this.isModified = prevModified;
 						this.setDescriptorEtag(this.meta, etag);
 						
 						this.fileSaved(savedData, savedEtag, mxUtils.bind(this, function()
@@ -267,8 +265,6 @@ GitHubFile.prototype.saveFile = function(title, revision, success, error, unload
 					mxUtils.bind(this, function(err)
 					{
 						this.savingFile = false;
-						this.isModified = prevModified;
-						this.setModified(modified || this.isModified());
 	
 						if (this.isConflict(err))
 						{
@@ -283,18 +279,6 @@ GitHubFile.prototype.saveFile = function(title, revision, success, error, unload
 						}
 						else if (error != null)
 						{
-							// Handles modified state for retries
-							if (err != null && err.retry != null)
-							{
-								var retry = err.retry;
-								
-								err.retry = function()
-								{
-									prepare();
-									retry();
-								};
-							}
-							
 							error(err);
 						}
 					}), overwrite, message);
@@ -302,16 +286,6 @@ GitHubFile.prototype.saveFile = function(title, revision, success, error, unload
 				catch (e)
 				{
 					this.savingFile = false;
-					
-					if (prevModified != null)
-					{
-						this.isModified = prevModified;
-					}
-					
-					if (modified != null)
-					{
-						this.setModified(modified || this.isModified());
-					}
 					
 					if (error != null)
 					{
@@ -325,13 +299,17 @@ GitHubFile.prototype.saveFile = function(title, revision, success, error, unload
 			}
 			else
 			{
-				this.savingFile = true;
+				// Sets shadow modified state during save
 				this.savingFileTime = new Date();
+				this.setShadowModified(false);
+				this.savingFile = true;
 				
 				this.ui.pickFolder(this.getMode(), mxUtils.bind(this, function(folderId)
 				{
 					this.peer.insertFile(title, this.getData(), mxUtils.bind(this, function(file)
 					{
+						// Checks for changes during save
+						this.setModified(this.getShadowModified());
 						this.savingFile = false;
 						
 						if (success != null)

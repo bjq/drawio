@@ -1,3 +1,96 @@
+14-JUL-2020: 13.4.3
+
+- Adds shape selection on blue arrow click
+
+10-JUL-2020: 13.4.2
+
+- Adds shape selection on double click
+- Fixes browser storage dialog
+
+09-JUL-2020: 13.4.1
+
+- Disables eval in HTML embed code
+
+08-JUL-2020: 13.4.0
+
+- Adds border for lightbox export
+- Uses mxGraph 4.2.1 beta 4
+- Adds Diagram Style panel
+
+04-JUL-2020: 13.3.9
+
+- Fixes ignored autosave for native files
+
+03-JUL-2020: 13.3.8
+
+- Adds experimental file system support
+
+02-JUL-2020: 13.3.7
+
+- Fixes image export with sketch style
+- Uses mxGraph 4.2.1 beta 3
+
+01-JUL-2020: 13.3.6
+
+- Fixes transparent background event handling for sketch style
+- Moves row for dragging selected table cell
+- Fixes inconsistent cursors for tables
+- Adds drag and drop for tables
+- Uses mxGraph 4.2.1 beta 2
+- Adds new basic templates
+- Adds rows in ER sidebar
+- Adds edit dialog style
+
+25-JUN-2020: 13.3.5
+
+- Fixes minor bugs
+
+24-JUN-2020: 13.3.4
+
+- Fixes minor bugs
+
+24-JUN-2020: 13.3.3
+
+- Fixes move for tables with selected rows
+- Fixes flex arrow custom handle preview
+- Fixes ignored zoom for step perimeter
+- Uses mxGraph 4.2.1 beta 1
+
+24-JUN-2020: 13.3.2
+
+- Fixes sketch style for partial rectangles
+- No longer replaces comic style
+
+23-JUN-2020: 13.3.1
+
+- Adds rough style and URL parameter
+- Adds support for viewbox in link actions
+- Adds hide-pages, viewbox URL parameters
+- Uses mxGraph 4.2.1
+
+19-JUN-2020: 13.3.0
+
+- Adds ok for prompt JSON message
+- Adds prompt-cancel JSON event
+- Uses mxGraph 4.2.0
+
+17-JUN-2020: 13.2.6
+
+- Fixes caching issues for Confluence Cloud
+
+17-JUN-2020: 13.2.5
+
+- Adds embed.diagrams.net for embed mode
+- Adds Alt+Shift to toggle child cells
+- Fixes toggle selection for groups
+- Uses mxGraph 4.2.0 beta 10
+
+13-JUN-2020: 13.2.4
+
+- Uses tables in Misc and ER sidebar
+- Adds table size in Arrange panel
+- Uses mxGraph 4.2.0 beta 9
+
 11-JUN-2020: 13.2.3
 
 - Uses base for fonts in SVG export

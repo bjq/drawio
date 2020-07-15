@@ -933,18 +933,24 @@
 		 this.canvas.arcTo = this.originalArcTo;
 	};
 	
-	// Installs hand jiggle in all shapes
-	var mxShapePaint0 = mxShape.prototype.paint;
-	mxShape.prototype.defaultJiggle = 1.5;
-	mxShape.prototype.paint = function(c)
+	// Installs hand jiggle for comic and sketch style
+	mxShape.prototype.defaultJiggle = 1.5;	
+
+	var shapeBeforePaint = mxShape.prototype.beforePaint;
+	mxShape.prototype.beforePaint = function(c)
 	{
-		// NOTE: getValue does not return a boolean value so !('0') would return true here and below
-		if (this.style != null && mxUtils.getValue(this.style, 'comic', '0') != '0' && c.handHiggle == null)
-		{
-			c.handJiggle = new HandJiggle(c, mxUtils.getValue(this.style, 'jiggle', this.defaultJiggle));
-		}
+		shapeBeforePaint.apply(this, arguments);
 		
-		mxShapePaint0.apply(this, arguments);
+		if (c.handJiggle == null)
+		{
+			c.handJiggle = this.createHandJiggle(c);
+		}
+	};
+	
+	var shapeAfterPaint = mxShape.prototype.afterPaint;
+	mxShape.prototype.afterPaint = function(c)
+	{
+		shapeAfterPaint.apply(this, arguments);
 		
 		if (c.handJiggle != null)
 		{
@@ -952,24 +958,40 @@
 			delete c.handJiggle;
 		}
 	};
+		
+	// Returns a new HandJiggle canvas
+	mxShape.prototype.createComicCanvas = function(c)
+	{
+		return new HandJiggle(c, mxUtils.getValue(this.style, 'jiggle', this.defaultJiggle));
+	};
+	
+	// Overrides to avoid call to rect
+	mxShape.prototype.createHandJiggle = function(c)
+	{
+		if (!this.outline && this.style != null && mxUtils.getValue(this.style, 'comic', '0') != '0')
+		{
+			return this.createComicCanvas(c);
+		}
+		
+		return null;
+	};
 	
 	// Sets default jiggle for diamond
 	mxRhombus.prototype.defaultJiggle = 2;
 
-	/**
-	 * Overrides to avoid call to rect
-	 */
+	// Overrides to avoid call to rect
 	var mxRectangleShapeIsHtmlAllowed0 = mxRectangleShape.prototype.isHtmlAllowed;
 	mxRectangleShape.prototype.isHtmlAllowed = function()
 	{
-		return (this.style == null || mxUtils.getValue(this.style, 'comic', '0') == '0') &&
+		return !this.outline && (this.style == null || (mxUtils.getValue(this.style, 'comic', '0') == '0' &&
+			mxUtils.getValue(this.style, 'sketch', (urlParams['rough'] == '1') ? '1' : '0') == '0')) &&
 			mxRectangleShapeIsHtmlAllowed0.apply(this, arguments);
 	};
 	
 	var mxRectangleShapePaintBackground0 = mxRectangleShape.prototype.paintBackground;
 	mxRectangleShape.prototype.paintBackground = function(c, x, y, w, h)
 	{
-		if (c.handJiggle == null)
+		if (c.handJiggle == null || c.handJiggle.constructor != HandJiggle)
 		{
 			mxRectangleShapePaintBackground0.apply(this, arguments);
 		}
@@ -1020,7 +1042,6 @@
 				}
 				else
 				{
-					
 					c.moveTo(x, y);
 					c.lineTo(x + w, y);
 					c.lineTo(x + w, y + h);
@@ -1199,13 +1220,16 @@
 	};
 	mxUtils.extend(HexagonShape, mxHexagon);
 	HexagonShape.prototype.size = 0.25;
+	HexagonShape.prototype.fixedSize = 20;
 	HexagonShape.prototype.isRoundable = function()
 	{
 		return true;
 	};
 	HexagonShape.prototype.redrawPath = function(c, x, y, w, h)
 	{
-		var s =  w * Math.max(0, Math.min(1, parseFloat(mxUtils.getValue(this.style, 'size', this.size))));
+		var fixed = mxUtils.getValue(this.style, 'fixedSize', '0') != '0';
+		var s = (fixed) ? Math.max(0, Math.min(w, parseFloat(mxUtils.getValue(this.style, 'size', this.fixedSize)))) :
+			w * Math.max(0, Math.min(1, parseFloat(mxUtils.getValue(this.style, 'size', this.size))));
 		var arcSize = mxUtils.getValue(this.style, mxConstants.STYLE_ARCSIZE, mxConstants.LINE_ARCSIZE) / 2;
 		this.addPoints(c, [new mxPoint(s, 0), new mxPoint(w - s, 0), new mxPoint(w, 0.5 * h), new mxPoint(w - s, h),
 		                   new mxPoint(s, h), new mxPoint(0, 0.5 * h)], this.isRounded, arcSize, true);
@@ -1909,6 +1933,11 @@
 			size = mxUtils.getValue(vertex.style, 'size', size);
 		}
 		
+		if (fixed)
+		{
+			size *= vertex.view.scale;
+		}
+		
 		var x = bounds.x;
 		var y = bounds.y;
 		var w = bounds.width;
@@ -1973,7 +2002,8 @@
 	// Hexagon Perimeter 2 (keep existing one)
 	mxPerimeter.HexagonPerimeter2 = function (bounds, vertex, next, orthogonal)
 	{
-		var size = HexagonShape.prototype.size;
+		var fixed = mxUtils.getValue(vertex.style, 'fixedSize', '0') != '0';
+		var size = (fixed) ? HexagonShape.prototype.fixedSize : HexagonShape.prototype.size;
 		
 		if (vertex != null)
 		{
@@ -1997,14 +2027,14 @@
 		
 		if (vertical)
 		{
-			var dy = h * Math.max(0, Math.min(1, size));
+			var dy = (fixed) ? Math.max(0, Math.min(h, size)) : h * Math.max(0, Math.min(1, size));
 			points = [new mxPoint(cx, y), new mxPoint(x + w, y + dy), new mxPoint(x + w, y + h - dy),
 							new mxPoint(cx, y + h), new mxPoint(x, y + h - dy),
 							new mxPoint(x, y + dy), new mxPoint(cx, y)];
 		}
 		else
 		{
-			var dx = w * Math.max(0, Math.min(1, size));
+			var dx = (fixed) ? Math.max(0, Math.min(w, size)) : w * Math.max(0, Math.min(1, size));
 			points = [new mxPoint(x + dx, y), new mxPoint(x + w - dx, y), new mxPoint(x + w, cy),
 						new mxPoint(x + w - dx, y + h), new mxPoint(x + dx, y + h),
 						new mxPoint(x, cy), new mxPoint(x + dx, y)];
@@ -2794,14 +2824,21 @@
 			c.setStrokeColor(null);
 		}
 
-		mxRectangleShape.prototype.paintBackground.apply(this, arguments);
-		
 		if (this.style != null)
 		{
-			c.setStrokeColor(this.stroke);
+			var pointerEvents = c.pointerEvents;
+			var events = mxUtils.getValue(this.style, mxConstants.STYLE_POINTER_EVENTS, '1') == '1';
+			
+			if (!events && (this.fill == null || this.fill == mxConstants.NONE))
+			{
+				c.pointerEvents = false;
+			}
+
 			c.rect(x, y, w, h);
 			c.fill();
 
+			c.pointerEvents = pointerEvents;
+			c.setStrokeColor(this.stroke);
 			c.begin();
 			c.moveTo(x, y);
 			
@@ -3706,7 +3743,7 @@
 							Math.round(Math.max(0, Math.min(bounds.width, pt.x - bounds.x)));
 				}, false, null, function(me)
 				{
-					if (mxEvent.isShiftDown(me.getEvent()))
+					if (mxEvent.isControlDown(me.getEvent()))
 					{
 						var graph = state.view.graph;
 						
@@ -4021,7 +4058,7 @@
 				}, false)];
 			},
 			'step': createDisplayHandleFunction(StepShape.prototype.size, true, null, true, StepShape.prototype.fixedSize),
-			'hexagon': createDisplayHandleFunction(HexagonShape.prototype.size, true, 0.5, true),
+			'hexagon': createDisplayHandleFunction(HexagonShape.prototype.size, true, 0.5, true, HexagonShape.prototype.fixedSize),
 			'curlyBracket': createDisplayHandleFunction(CurlyBracketShape.prototype.size, false),
 			'display': createDisplayHandleFunction(DisplayShape.prototype.size, false),
 			'cube': createCubeHandleFunction(1, CubeShape.prototype.size, false),
@@ -4299,11 +4336,12 @@
 	                                   new mxConnectionConstraint(new mxPoint(0, 1), true), new mxConnectionConstraint(new mxPoint(1, 1), true),
 	                                   new mxConnectionConstraint(new mxPoint(0.5, 0), true), new mxConnectionConstraint(new mxPoint(0.5, 1), true),
 	          	              		   new mxConnectionConstraint(new mxPoint(0, 0.5), true), new mxConnectionConstraint(new mxPoint(1, 0.5))];
-	mxLabel.prototype.constraints = mxRectangleShape.prototype.constraints;
+	PartialRectangleShape.prototype.constraints = mxRectangleShape.prototype.constraints;
 	mxImageShape.prototype.constraints = mxRectangleShape.prototype.constraints;
 	mxSwimlane.prototype.constraints = mxRectangleShape.prototype.constraints;
 	PlusShape.prototype.constraints = mxRectangleShape.prototype.constraints;
-
+	mxLabel.prototype.constraints = mxRectangleShape.prototype.constraints;
+	
 	NoteShape.prototype.getConstraints = function(style, w, h)
 	{
 		var constr = [];

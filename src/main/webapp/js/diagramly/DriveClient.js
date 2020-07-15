@@ -1523,14 +1523,14 @@ DriveClient.prototype.saveFile = function(file, revision, success, errFn, noChec
 									var acceptResponse = true;
 									var timeoutThread = null;
 									
-									// Allow for re-auth flow with 3x timeout
+									// Allow for re-auth flow with 5x timeout
 									try
 									{
 										timeoutThread = window.setTimeout(mxUtils.bind(this, function()
 										{
 											acceptResponse = false;
-											error({code: App.ERROR_TIMEOUT, message: mxResources.get('timeout')});
-										}), 3 * this.ui.timeout);
+											error({code: App.ERROR_TIMEOUT});
+										}), 5 * this.ui.timeout);
 									}
 									catch (e)
 									{
@@ -1671,7 +1671,7 @@ DriveClient.prototype.saveFile = function(file, revision, success, errFn, noChec
 										timeoutThread = window.setTimeout(mxUtils.bind(this, function()
 										{
 											acceptResponse = false;
-											error({code: App.ERROR_TIMEOUT, message: mxResources.get('timeout')});
+											error({code: App.ERROR_TIMEOUT});
 										}), 3 * this.ui.timeout);
 									}
 									catch (e)
